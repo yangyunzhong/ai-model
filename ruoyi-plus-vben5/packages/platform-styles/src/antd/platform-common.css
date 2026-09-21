@@ -1,0 +1,145 @@
+.platform-surface {
+  padding: var(--st-module-content-padding);
+  background: hsl(var(--card));
+  border: 0;
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+}
+
+.platform-table-toolbar {
+  background: hsl(var(--st-color-table-toolbar-bg));
+  border-radius: var(--st-radius-card);
+}
+
+.platform-header-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: var(--st-header-action-size);
+  height: var(--st-header-action-size);
+  padding-inline: 8px;
+  color: hsl(var(--header-foreground) / 90%);
+  font-size: var(--st-font-size-base);
+  line-height: var(--st-line-height-base);
+  border-radius: var(--st-radius-control);
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.platform-header-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--st-header-action-size);
+  min-width: var(--st-header-action-size);
+  height: var(--st-header-action-size);
+  color: hsl(var(--header-foreground)) !important;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 9999px;
+  transition:
+    background-color 0.16s ease;
+}
+
+.platform-header-action:hover,
+.platform-header-action:focus-visible {
+  color: hsl(var(--primary));
+  background: hsl(var(--st-color-fill-selected));
+  outline: none;
+}
+
+.platform-header-icon-action:hover,
+.platform-header-icon-action:focus-visible {
+  color: hsl(var(--header-foreground)) !important;
+  background: hsl(var(--st-color-nav-hover-bg)) !important;
+  outline: none;
+}
+
+.platform-header-icon-action:disabled {
+  background: transparent !important;
+}
+
+.platform-header-icon-action .text-foreground,
+.platform-header-icon-action svg,
+.platform-header-icon-action .vben-avatar {
+  color: inherit !important;
+}
+
+.platform-user-avatar-dot {
+  border-color: hsl(var(--header-foreground)) !important;
+}
+
+.platform-header-icon-action--ring:hover svg,
+.platform-header-icon-action--ring:focus-visible svg {
+  animation: platform-header-icon-ring 1s both;
+}
+
+@keyframes platform-header-icon-ring {
+  0%,
+  100% {
+    transform-origin: top;
+  }
+
+  15% {
+    transform: rotateZ(10deg);
+  }
+
+  30% {
+    transform: rotateZ(-10deg);
+  }
+
+  45% {
+    transform: rotateZ(5deg);
+  }
+
+  60% {
+    transform: rotateZ(-5deg);
+  }
+
+  75% {
+    transform: rotateZ(2deg);
+  }
+}
+
+.platform-header-action span {
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-action-button.ant-btn-link {
+  padding-inline: 0;
+  font-weight: 600;
+}
+
+.platform-action-button.ant-btn-link + .platform-action-button.ant-btn-link {
+  margin-inline-start: 16px;
+}
+
+/* .ant-btn {
+  .anticon {
+    display: inline-flex;
+  }
+
+  > svg {
+    display: inline-block;
+  }
+
+  > svg + span {
+    margin-inline-start: 6px;
+  }
+} */
+
+/* .ant-tag {
+  > svg {
+    display: inline-block;
+  }
+
+  > svg + span {
+    margin-inline-start: 4px;
+  }
+} */

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>委外项目管理系统 - 原型导航</title>
+  <style>
+:root {
+  --st-color-brand: 146 100% 30%;
+  --st-color-brand-hover: 146 100% 34%;
+  --st-color-page-bg: 220 20% 95%;
+  --st-color-card-bg: 0 0% 100%;
+  --st-color-text-primary: 223 10% 13%;
+  --st-color-text-secondary: 220 9% 28%;
+  --st-color-text-tertiary: 222 5% 48%;
+  --st-color-border-subtle: 220 23% 95%;
+  --st-color-border-control: 220 13% 91%;
+  --st-color-fill-selected: 146 100% 30% / 10%;
+  --st-radius-card: 6px;
+  --st-shadow-card: 0 4px 8px hsl(146 100% 10% / 8%);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: hsl(var(--st-color-page-bg));
+  color: hsl(var(--st-color-text-primary));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+  min-height: 100vh;
+}
+
+.header {
+  background: hsl(var(--st-color-brand));
+  color: #fff;
+  padding: 32px 48px;
+  text-align: center;
+}
+.header h1 {
+  font-size: 32px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.header p {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--st-color-text-primary));
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid hsl(var(--st-color-brand));
+}
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.page-card {
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+  padding: 24px;
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+.page-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px hsl(146 100% 10% / 12%);
+}
+
+.page-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: hsl(var(--st-color-fill-selected));
+  color: hsl(var(--st-color-brand));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.page-card__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: hsl(var(--st-color-text-primary));
+  margin-bottom: 8px;
+}
+
+.page-card__desc {
+  font-size: 14px;
+  color: hsl(var(--st-color-text-tertiary));
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.page-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.page-card__tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  background: hsl(var(--st-color-fill-selected));
+  color: hsl(var(--st-color-brand));
+}
+
+.footer {
+  text-align: center;
+  padding: 32px;
+  color: hsl(var(--st-color-text-tertiary));
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .page-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .page-grid { grid-template-columns: 1fr; }
+  .header { padding: 24px; }
+  .header h1 { font-size: 24px; }
+}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <h1>🚇 委外项目管理系统</h1>
+    <p>完整原型导航 · 一比一还原真实前端 · 深圳地铁绿色主题</p>
+  </header>
+
+  <main class="main">
+    <h2 class="section-title">📋 原型页面导航</h2>
+    <div class="page-grid">
+      <a href="information.html" class="page-card">
+        <div class="page-card__icon">📝</div>
+        <div class="page-card__title">项目信息管理</div>
+        <div class="page-card__desc">维护委外项目基础信息、招采信息和进场信息，支持多维筛选与导出</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">筛选面板</span>
+          <span class="page-card__tag">数据表格</span>
+          <span class="page-card__tag">模态框表单</span>
+        </div>
+      </a>
+
+      <a href="overview.html" class="page-card">
+        <div class="page-card__icon">📊</div>
+        <div class="page-card__title">项目总览</div>
+        <div class="page-card__desc">全生命周期数字化管理，统计卡片 + 项目列表 + 详情抽屉</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">统计卡片</span>
+          <span class="page-card__tag">进度条</span>
+          <span class="page-card__tag">抽屉详情</span>
+        </div>
+      </a>
+
+      <a href="progress.html" class="page-card">
+        <div class="page-card__icon">📈</div>
+        <div class="page-card__title">项目进度管理</div>
+        <div class="page-card__desc">甘特图 / 看板 / 进度条，进度可视化跟踪与预警</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">甘特图</span>
+          <span class="page-card__tag">看板</span>
+          <span class="page-card__tag">进度预警</span>
+        </div>
+      </a>
+
+      <a href="contract.html" class="page-card">
+        <div class="page-card__icon">💰</div>
+        <div class="page-card__title">合同与付款管理</div>
+        <div class="page-card__desc">合同存储、版本控制、付款审批联动，卡片式展示</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">统计卡片</span>
+          <span class="page-card__tag">合同卡片</span>
+          <span class="page-card__tag">付款节点</span>
+        </div>
+      </a>
+
+      <a href="evaluation.html" class="page-card">
+        <div class="page-card__icon">✅</div>
+        <div class="page-card__title">中期评估与验收</div>
+        <div class="page-card__desc">评估模板、验收流程数字化留痕，左右分栏布局</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">待评估项目</span>
+          <span class="page-card__tag">评估记录</span>
+          <span class="page-card__tag">评分系统</span>
+        </div>
+      </a>
+
+      <a href="document.html" class="page-card">
+        <div class="page-card__icon">📁</div>
+        <div class="page-card__title">文档与台账管理</div>
+        <div class="page-card__desc">合同、技术方案、验收报告等文档分类管理与台账导出</div>
+        <div class="page-card__tags">
+          <span class="page-card__tag">文件列表</span>
+          <span class="page-card__tag">批量上传</span>
+          <span class="page-card__tag">台账导出</span>
+        </div>
+      </a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>💡 双击任意 HTML 文件即可在浏览器中预览 · 所有 CSS 内联，无需服务器</p>
+    <p style="margin-top:8px">🎨 深圳地铁绿色主题 #009943 · 与真实前端一比一还原</p>
+  </footer>
+</body>
+</html>

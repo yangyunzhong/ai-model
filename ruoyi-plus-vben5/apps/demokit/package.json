@@ -1,0 +1,32 @@
+{
+  "name": "@st/demokit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --host 127.0.0.1 --port 5174",
+    "preview": "vite preview --host 127.0.0.1 --port 4174",
+    "typecheck": "vue-tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "@st/platform-styles": "workspace:*",
+    "@st/platform-ui": "workspace:*",
+    "@vben/icons": "workspace:*",
+    "@vben/styles": "workspace:*",
+    "@vben/types": "workspace:*",
+    "antdv-next": "catalog:",
+    "echarts": "catalog:",
+    "marked": "^18.0.4",
+    "shiki": "^4.1.0",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@vben/tsconfig/web-app.json",
+  "compilerOptions": {
+    "paths": {
+      "@st/platform-styles": ["../../packages/platform-styles/src/index.ts"],
+      "@st/platform-styles/antd": [
+        "../../packages/platform-styles/src/antd/index.css"
+      ],
+      "@st/platform-ui": ["../../packages/platform-ui/src/index.ts"],
+      "@vben/icons": ["../../packages/icons/src/index.ts"],
+      "@vben/styles": ["../../packages/styles/src/index.ts"],
+      "echarts": ["../../node_modules/echarts/index.d.ts"],
+      "#/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue"]
+}

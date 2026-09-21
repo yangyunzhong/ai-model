@@ -1,0 +1,96 @@
+:root {
+  /* Shenzhen Metro platform design tokens from Figma */
+  /* Primary brand color: #009943 */
+  --st-color-brand: 146 100% 30%;
+  --st-color-brand-hover: 146 100% 34%;
+  --st-color-brand-active: 146 100% 26%;
+  --st-color-brand-outline: 146 100% 30% / 30%;
+  /* Secondary accent color: #b7d342 */
+  --st-color-accent: 72 62% 54%;
+  --st-color-accent-hover: 72 62% 58%;
+  --st-color-accent-active: 72 62% 48%;
+  --st-color-accent-outline: 72 62% 54% / 30%;
+  --st-color-page-bg: 220 20% 95%;
+  --st-color-card-bg: 0 0% 100%;
+  --st-color-text-primary: 223 10% 13%;
+  --st-color-text-secondary: 220 9% 28%;
+  --st-color-text-tertiary: 222 5% 48%;
+  --st-color-text-placeholder: 223 10% 13% / 40%;
+  --st-color-text-disabled: 222 8% 78%;
+  --st-color-border-subtle: 220 23% 95%;
+  --st-color-border-control: 220 13% 91%;
+  --st-color-fill-selected: 146 100% 30% / 10%;
+  --st-color-fill-accent: 72 62% 54% / 14%;
+  --st-color-fill-disabled: 218 13% 86%;
+  --st-color-nav-active-bg: 210 8% 5% / 26%;
+  --st-color-nav-hover-bg: 210 8% 5% / 14%;
+  --st-color-nav-divider: 0 0% 100% / 20%;
+  --st-color-tooltip-bg: 220 9% 28%;
+  --st-color-tooltip-fg: 0 0% 100%;
+  --st-color-table-toolbar-bg: 220 38% 94%;
+  --st-color-table-tool-bg: 0 0% 100%;
+  --st-color-table-tool-border: 146 100% 30% / 30%;
+  --st-color-table-tool-icon: 220 8% 28%;
+  --st-color-table-tool-hover-bg: var(--st-color-fill-selected);
+  --st-color-table-tool-hover-border: var(--st-color-brand-outline);
+  --st-color-table-tool-hover-icon: var(--st-color-brand);
+  --st-color-table-cell-bg-solid: var(--st-color-card-bg);
+  --st-color-table-cell-bg: var(--st-color-table-cell-bg-solid);
+  --st-color-table-header-bg: var(--st-color-border-subtle);
+  --st-color-table-outline: var(--st-color-border-control);
+  --st-color-table-row-hover-bg-solid: #f3f4fa;
+  --st-color-table-row-selected-bg: 146 44.4% 92.9%;
+  --st-color-stat-card-bg: var(--st-color-card-bg);
+  --st-color-stat-card-border: var(--st-color-border-subtle);
+  --st-color-stat-card-text: var(--st-color-text-tertiary);
+  --st-color-stat-card-info: 211 90% 56%;
+  --st-color-tree-switcher: var(--st-color-text-tertiary);
+  --st-color-warning-action: 71 61% 54%;
+  --st-color-more-action: 25 33% 52%;
+  --st-color-danger: 355 76% 59%;
+  --st-radius-control: 4px;
+  --st-radius-card: 6px;
+  --st-radius-menu: 4px;
+  --st-header-height: 56px;
+  --st-header-logo-width: 360px;
+  --st-header-action-size: 36px;
+  --st-control-height: 36px;
+  --st-table-action-column-width: 184px;
+  --st-table-edge-cell-padding: 24px;
+  --st-table-header-height: 44px;
+  --st-table-row-height: 44px;
+  --st-tree-node-height: 32px;
+  --st-pagination-item-size: 32px;
+  --st-stat-card-icon-box-size: 48px;
+  --st-stat-card-icon-size: 2rem;
+  --st-layout-section-gap: 24px;
+  --st-module-content-padding: 24px;
+  --st-search-form-action-gap: 12px;
+  --st-search-form-action-margin-top: 0px;
+  --st-font-size-sm: 13px;
+  --st-font-size-base: 14px;
+  --st-font-size-lg: 16px;
+  --st-font-size-title: 18px;
+  --st-line-height-base: 18px;
+  --st-line-height-lg: 24px;
+  --st-shadow-card: 0 4px 8px hsl(146 100% 10% / 8%);
+  --st-shadow-stat-card: var(--st-shadow-card);
+  --st-shadow-stat-card-hover: 0 10px 22px hsl(146 100% 10% / 10%);
+}
+
+.dark,
+.dark[data-theme='custom'],
+.dark[data-theme='default'] {
+  --st-color-table-tool-bg: 146 100% 30% / 16%;
+  --st-color-table-tool-border: 146 100% 30% / 40%;
+  --st-color-table-tool-icon: var(--st-color-brand);
+  --st-color-table-tool-hover-bg: var(--st-color-fill-selected);
+  --st-color-table-tool-hover-border: var(--st-color-brand-outline);
+  --st-color-table-tool-hover-icon: var(--st-color-brand);
+  --st-color-table-cell-bg-solid: var(--card);
+  --st-color-table-cell-bg: var(--st-color-table-cell-bg-solid);
+  --st-color-table-header-bg: var(--st-color-border-subtle);
+  --st-color-table-outline: var(--border);
+  --st-color-table-row-hover-bg-solid: #20362a;
+  --st-color-table-row-selected-bg: 146 24% 24%;
+}

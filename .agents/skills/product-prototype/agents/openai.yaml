@@ -1,0 +1,7 @@
+interface:
+  display_name: "PM 前端 mock 原型"
+  short_description: "自然语言生成可运行前端 mock，并纳入 Trellis 原型任务"
+  default_prompt: "使用 $product-prototype 根据 PM 的自然语言需求创建或接续 Trellis 原型任务，生成可运行的前端 mock 原型，并整理模拟数据、预览入口、draft API 协议、draft 数据模型和开发交接包。"
+
+policy:
+  allow_implicit_invocation: true

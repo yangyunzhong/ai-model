@@ -1,0 +1,7 @@
+.ant-message-notice-content,
+.ant-notification-notice {
+  &:is(.dark *) {
+    border-color: hsl(var(--border) / 60%);
+    border-width: 1px;
+  }
+}

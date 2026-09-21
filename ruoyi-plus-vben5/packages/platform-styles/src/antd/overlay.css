@@ -1,0 +1,32 @@
+.ant-modal .ant-modal-content,
+.ant-drawer .ant-drawer-content {
+  color: hsl(var(--foreground));
+  border-radius: var(--st-radius-card);
+}
+
+.ant-modal .ant-modal-container {
+  padding: 0 !important;
+}
+
+.ant-modal .ant-modal-header,
+.ant-drawer .ant-drawer-header {
+  border-bottom-color: hsl(var(--st-color-border-subtle));
+}
+
+.ant-drawer .ant-drawer-section.platform-drawer > .ant-drawer-header {
+  padding: 0 !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.ant-drawer .ant-drawer-section.platform-drawer > .ant-drawer-body {
+  padding: 24px 40px 24px 40px !important;
+}
+
+.ant-modal .ant-modal-title,
+.ant-drawer .ant-drawer-title {
+  color: hsl(var(--foreground));
+  font-size: var(--st-font-size-lg);
+  font-weight: 600;
+  line-height: var(--st-line-height-lg);
+}

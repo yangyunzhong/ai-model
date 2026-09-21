@@ -1,0 +1,9 @@
+.ant-steps.ant-steps-filled .ant-steps-item-finish,
+.ant-steps.ant-steps-filled .ant-steps-item-process {
+  --ant-cmp-steps-item-icon-bg-color: hsl(var(--primary));
+  --ant-cmp-steps-item-icon-border-color: transparent;
+  --ant-cmp-steps-item-icon-text-color: hsl(var(--primary-foreground));
+  --ant-cmp-steps-item-icon-active-bg-color: hsl(var(--primary));
+  --ant-cmp-steps-item-icon-active-border-color: transparent;
+  --ant-cmp-steps-item-icon-active-text-color: hsl(var(--primary-foreground));
+}

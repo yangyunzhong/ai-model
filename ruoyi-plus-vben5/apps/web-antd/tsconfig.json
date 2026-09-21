@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@vben/tsconfig/web-app.json",
+  "compilerOptions": {
+    "paths": {
+      "@vben/icons": ["./node_modules/@vben/icons/src/index.ts"],
+      "@st/platform-adapter": ["../../packages/platform-adapter/src/index.ts"],
+      "@st/platform-adapter/*": ["../../packages/platform-adapter/src/*"],
+      "@st/platform-styles": ["../../packages/platform-styles/src/index.ts"],
+      "@st/platform-types": ["../../packages/platform-types/src/index.ts"],
+      "@st/platform-ui": ["../../packages/platform-ui/src/index.ts"],
+      "@st/platform-utils": ["../../packages/platform-utils/src/index.ts"],
+      "antdv-next": ["./node_modules/antdv-next/dist/index.d.ts"],
+      "antdv-next/es/*": ["./node_modules/antdv-next/dist/*"],
+      "antdv-next/locale/*": ["./node_modules/antdv-next/dist/locale/*"],
+      "echarts": ["./node_modules/echarts/index.d.ts"],
+      "vue-router": ["./node_modules/vue-router/dist/vue-router.d.ts"],
+      "@vben/plugins": ["../../packages/effects/plugins/src/index.ts"],
+      "@vben/plugins/*": ["../../packages/effects/plugins/src/*"],
+      "#/*": ["./src/*"]
+    }
+  },
+  "references": [{ "path": "./tsconfig.node.json" }],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "types/**/*.d.ts"]
+}

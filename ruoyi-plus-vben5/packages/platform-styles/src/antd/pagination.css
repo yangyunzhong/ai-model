@@ -1,0 +1,64 @@
+.ant-pagination {
+  color: hsl(var(--st-color-text-secondary));
+}
+
+.ant-pagination .ant-pagination-item,
+.ant-pagination .ant-pagination-prev,
+.ant-pagination .ant-pagination-next,
+.ant-pagination .ant-pagination-jump-prev,
+.ant-pagination .ant-pagination-jump-next {
+  min-width: var(--st-pagination-item-size);
+  height: var(--st-pagination-item-size);
+  line-height: calc(var(--st-pagination-item-size) - 2px);
+  border-radius: var(--st-radius-control);
+}
+
+.ant-pagination .ant-pagination-item {
+  background: hsl(var(--st-color-page-bg));
+  border-color: transparent;
+}
+
+.ant-pagination .ant-pagination-item a {
+  color: hsl(var(--st-color-text-secondary));
+}
+
+.ant-pagination .ant-pagination-item-active {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: hsl(var(--primary-foreground));
+  font-weight: 500;
+}
+
+.ant-pagination .ant-pagination-disabled,
+.ant-pagination .ant-pagination-disabled button {
+  color: hsl(var(--st-color-text-disabled));
+}
+
+.ant-pagination .ant-pagination-options {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 16px;
+}
+
+.ant-pagination .ant-pagination-options .ant-select {
+  min-width: 108px;
+}
+
+.ant-pagination
+  .ant-pagination-options
+  .ant-select:not(.ant-select-customize-input)
+  .ant-select-selector {
+  min-height: var(--st-pagination-item-size);
+  padding-inline: 12px 30px;
+  background: hsl(var(--st-color-page-bg));
+  border-color: hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-control);
+}
+
+.ant-pagination .ant-pagination-options .ant-select-selection-item,
+.ant-pagination .ant-pagination-options .ant-select-selection-placeholder {
+  line-height: calc(var(--st-pagination-item-size) - 2px);
+}

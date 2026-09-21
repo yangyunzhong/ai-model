@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外包项目评估 - 深圳地铁</title>
+    <style>
+        /* CSS Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* 深圳地铁绿色主题 */
+            --st-color-brand: 146 100% 30%;
+            --color-primary: hsl(var(--st-color-brand));
+            --color-primary-light: hsl(146 100% 40%);
+            --color-primary-dark: hsl(146 100% 24%);
+            --color-primary-bg: hsl(146 60% 96%);
+            
+            /* 功能色 */
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --color-info: #3b82f6;
+            
+            /* 中性色 */
+            --color-text-primary: #1f2937;
+            --color-text-secondary: #6b7280;
+            --color-text-tertiary: #9ca3af;
+            --color-border: #e5e7eb;
+            --color-bg: #f9fafb;
+            --color-bg-card: #ffffff;
+            
+            /* 间距 */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            
+            /* 圆角 */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            
+            /* 阴影 */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text-primary);
+            line-height: 1.5;
+        }
+
+        /* PlatformViewToolbar */
+        .toolbar {
+            background: var(--color-bg-card);
+            border-bottom: 1px solid var(--color-border);
+            padding: var(--spacing-md) var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-dark);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-bg);
+        }
+
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 13px;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: var(--spacing-lg);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Statistics Cards Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .stat-card {
+            background: var(--color-bg-card);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .stat-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .stat-card-title {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .stat-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stat-card-icon.primary {
+            background: var(--color-primary-bg);
+            color: var(--color-primary);
+        }
+
+        .stat-card-icon.success {
+            background: #d1fae5;
+            color: var(--color-success);
+        }
+
+        .stat-card-icon.warning {
+            background: #fef3c7;
+            color: var(--color-warning);
+        }
+
+        .stat-card-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-card-trend {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .stat-card-trend .trend-up {
+            color: var(--color-success);
+        }
+
+        /* Two Column Layout */
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        /* Left Panel - Pending Evaluation Cards */
+        .left-panel {
+            background: var(--color-bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: var(--spacing-md) var(--spacing-lg);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .panel-badge {
+            background: var(--color-primary-bg);
+            color: var(--color-primary);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .panel-content {
+            padding: var(--spacing-md);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Evaluation Card */
+        .evaluation-card {
+            background: var(--color-bg);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            border: 1px solid var(--color-border);
+            transition: all 0.2s;
+        }
+
+        .evaluation-card:hover {
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .evaluation-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .card-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--color-text-primary);
+            flex: 1;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: var(--spacing-xs);
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .tag-stage {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .tag-status {
+            background: var(--color-primary-bg);
+            color: var(--color-primary);
+        }
+
+        .card-info-row {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .card-info-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+
+        .card-progress-row {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--color-border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-primary);
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .card-action {
+            width: 100%;
+        }
+
+        /* Right Panel - Evaluation Records Table */
+        .right-panel {
+            background: var(--color-bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--color-bg);
+        }
+
+        th {
+            padding: var(--spacing-md);
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        td {
+            padding: var(--spacing-md);
+            font-size: 14px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        tbody tr:hover {
+            background: var(--color-bg);
+        }
+
+        .result-tag {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .result-tag.pass {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .result-tag.rectify {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .result-tag.fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .score {
+            font-weight: 600;
+        }
+
+        .score.high {
+            color: var(--color-success);
+        }
+
+        .score.medium {
+            color: var(--color-warning);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--color-bg-card);
+            border-radius: var(--radius-lg);
+            width: 560px;
+            max-width: 90%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-md);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--color-bg);
+            color: var(--color-text-primary);
+        }
+
+        .modal-body {
+            padding: var(--spacing-lg);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: var(--spacing-xs);
+            color: var(--color-text-primary);
+        }
+
+        .form-label .required {
+            color: var(--color-danger);
+            margin-left: 2px;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px var(--color-primary-bg);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+
+        .modal-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--color-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--spacing-sm);
+        }
+
+        /* Icons (SVG) */
+        .icon {
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--color-text-secondary);
+        }
+
+        /* Scrollbar */
+        .panel-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .panel-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb {
+            background: var(--color-border);
+            border-radius: 3px;
+        }
+
+        .panel-content::-webkit-scrollbar-thumb:hover {
+            background: var(--color-text-tertiary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <h1 class="toolbar-title">外包项目评估</h1>
+        <div class="toolbar-actions">
+            <button class="btn btn-secondary">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                </svg>
+                筛选
+            </button>
+            <button class="btn btn-secondary">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                导出
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">待评估项目</span>
+                    <div class="stat-card-icon primary">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-card-value">12</div>
+                <div class="stat-card-trend">
+                    本月新增 <span class="trend-up">+3</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">已通过验收</span>
+                    <div class="stat-card-icon success">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-card-value">45</div>
+                <div class="stat-card-trend">
+                    通过率 <span class="trend-up">92%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-card-header">
+                    <span class="stat-card-title">需整改项目</span>
+                    <div class="stat-card-icon warning">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-card-value">4</div>
+                <div class="stat-card-trend">
+                    整改中 <span>2</span> 项
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="two-column-layout">
+            <!-- Left Panel - Pending Evaluation Cards -->
+            <div class="left-panel">
+                <div class="panel-header">
+                    <span class="panel-title">待评估项目</span>
+                    <span class="panel-badge">12 项</span>
+                </div>
+                <div class="panel-content">
+                    <!-- Card 1 -->
+                    <div class="evaluation-card">
+                        <div class="card-title-row">
+                            <span class="card-title">智能运维平台开发项目</span>
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag tag-stage">验收阶段</span>
+                            <span class="tag tag-status">待评估</span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-5 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                信息中心
+                            </span>
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 7a4 4 0 11-8 0 4 4 0 018 0zM12 14l7-7m-7 7l-7-7"></path>
+                                </svg>
+                                张明
+                            </span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                截止：2024-01-20
+                            </span>
+                        </div>
+                        <div class="card-progress-row">
+                            <div class="progress-label">
+                                <span>项目进度</span>
+                                <span>85%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm card-action" onclick="openModal()">
+                            发起评估
+                        </button>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="evaluation-card">
+                        <div class="card-title-row">
+                            <span class="card-title">车站监控系统升级</span>
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag tag-stage">测试阶段</span>
+                            <span class="tag tag-status">待评估</span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-5 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                运营部
+                            </span>
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 7a4 4 0 11-8 0 4 4 0 018 0zM12 14l7-7m-7 7l-7-7"></path>
+                                </svg>
+                                李华
+                            </span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                截止：2024-01-25
+                            </span>
+                        </div>
+                        <div class="card-progress-row">
+                            <div class="progress-label">
+                                <span>项目进度</span>
+                                <span>70%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm card-action" onclick="openModal()">
+                            发起评估
+                        </button>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="evaluation-card">
+                        <div class="card-title-row">
+                            <span class="card-title">移动端APP开发</span>
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag tag-stage">验收阶段</span>
+                            <span class="tag tag-status">待评估</span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-5 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                客服中心
+                            </span>
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 7a4 4 0 11-8 0 4 4 0 018 0zM12 14l7-7m-7 7l-7-7"></path>
+                                </svg>
+                                王芳
+                            </span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                截止：2024-01-18
+                            </span>
+                        </div>
+                        <div class="card-progress-row">
+                            <div class="progress-label">
+                                <span>项目进度</span>
+                                <span>95%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm card-action" onclick="openModal()">
+                            发起评估
+                        </button>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="evaluation-card">
+                        <div class="card-title-row">
+                            <span class="card-title">数据分析平台建设</span>
+                        </div>
+                        <div class="card-tags">
+                            <span class="tag tag-stage">开发阶段</span>
+                            <span class="tag tag-status">待评估</span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-5 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                信息中心
+                            </span>
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 7a4 4 0 11-8 0 4 4 0 018 0zM12 14l7-7m-7 7l-7-7"></path>
+                                </svg>
+                                赵强
+                            </span>
+                        </div>
+                        <div class="card-info-row">
+                            <span class="card-info-item">
+                                <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                截止：2024-02-01
+                            </span>
+                        </div>
+                        <div class="card-progress-row">
+                            <div class="progress-label">
+                                <span>项目进度</span>
+                                <span>60%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-sm card-action" onclick="openModal()">
+                            发起评估
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Evaluation Records Table -->
+            <div class="right-panel">
+                <div class="panel-header">
+                    <span class="panel-title">评估记录</span>
+                    <button class="btn btn-secondary btn-sm">
+                        <svg class="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                        </svg>
+                        筛选
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>项目名称</th>
+                                <th>评估结果</th>
+                                <th>评估日期</th>
+                                <th>评估组</th>
+                                <th>得分</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>票务系统升级项目</td>
+                                <td><span class="result-tag pass">通过</span></td>
+                                <td>2024-01-10</td>
+                                <td>技术评审组</td>
+                                <td><span class="score high">95</span></td>
+                            </tr>
+                            <tr>
+                                <td>安检设备采购项目</td>
+                                <td><span class="result-tag pass">通过</span></td>
+                                <td>2024-01-08</td>
+                                <td>采购评审组</td>
+                                <td><span class="score high">92</span></td>
+                            </tr>
+                            <tr>
+                                <td>车辆段改造工程</td>
+                                <td><span class="result-tag rectify">整改</span></td>
+                                <td>2024-01-05</td>
+                                <td>工程评审组</td>
+                                <td><span class="score medium">85</span></td>
+                            </tr>
+                            <tr>
+                                <td>信号系统维护项目</td>
+                                <td><span class="result-tag pass">通过</span></td>
+                                <td>2024-01-03</td>
+                                <td>技术评审组</td>
+                                <td><span class="score high">96</span></td>
+                            </tr>
+                            <tr>
+                                <td>客服热线升级</td>
+                                <td><span class="result-tag rectify">整改</span></td>
+                                <td>2024-01-02</td>
+                                <td>业务评审组</td>
+                                <td><span class="score medium">88</span></td>
+                            </tr>
+                            <tr>
+                                <td>电梯监控系统</td>
+                                <td><span class="result-tag pass">通过</span></td>
+                                <td>2023-12-28</td>
+                                <td>安全评审组</td>
+                                <td><span class="score high">94</span></td>
+                            </tr>
+                            <tr>
+                                <td>消防设备更新</td>
+                                <td><span class="result-tag fail">不通过</span></td>
+                                <td>2023-12-25</td>
+                                <td>安全评审组</td>
+                                <td><span class="score medium">72</span></td>
+                            </tr>
+                            <tr>
+                                <td>自动售检票机维护</td>
+                                <td><span class="result-tag pass">通过</span></td>
+                                <td>2023-12-22</td>
+                                <td>设备评审组</td>
+                                <td><span class="score high">91</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">发起评估</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">
+                        待评估项目<span class="required">*</span>
+                    </label>
+                    <select class="form-select">
+                        <option>智能运维平台开发项目</option>
+                        <option>车站监控系统升级</option>
+                        <option>移动端APP开发</option>
+                        <option>数据分析平台建设</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">
+                            评估人/评估组<span class="required">*</span>
+                        </label>
+                        <select class="form-select">
+                            <option>技术评审组</option>
+                            <option>业务评审组</option>
+                            <option>安全评审组</option>
+                            <option>采购评审组</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            评估得分<span class="required">*</span>
+                        </label>
+                        <input type="number" class="form-input" placeholder="请输入得分" min="0" max="100">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">当前进度</label>
+                    <input type="text" class="form-input" value="85%" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">
+                        评估说明<span class="required">*</span>
+                    </label>
+                    <textarea class="form-textarea" placeholder="请输入评估说明..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitEvaluation()">提交评估</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal Functions
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function submitEvaluation() {
+            alert('评估已提交！');
+            closeModal();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal with ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

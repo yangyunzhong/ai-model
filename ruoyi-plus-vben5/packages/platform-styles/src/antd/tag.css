@@ -1,0 +1,6 @@
+.ant-tag {
+  min-height: 24px;
+  padding-inline: 8px;
+  line-height: 22px;
+  border-radius: var(--st-radius-control);
+}

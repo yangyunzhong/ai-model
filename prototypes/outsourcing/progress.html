@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>进度可视化跟踪 - 委外项目管理系统</title>
+  <style>
+/* ====== 深圳地铁平台设计令牌（与真实前端完全一致）====== */
+:root {
+  --st-color-brand: 146 100% 30%;
+  --st-color-brand-hover: 146 100% 34%;
+  --st-color-brand-active: 146 100% 26%;
+  --st-color-brand-outline: 146 100% 30% / 30%;
+  --st-color-page-bg: 220 20% 95%;
+  --st-color-card-bg: 0 0% 100%;
+  --st-color-text-primary: 223 10% 13%;
+  --st-color-text-secondary: 220 9% 28%;
+  --st-color-text-tertiary: 222 5% 48%;
+  --st-color-text-placeholder: 223 10% 13% / 40%;
+  --st-color-border-subtle: 220 23% 95%;
+  --st-color-border-control: 220 13% 91%;
+  --st-color-fill-selected: 146 100% 30% / 10%;
+  --st-color-fill-disabled: 218 13% 86%;
+  --st-color-danger: 355 76% 59%;
+  --st-color-warning: 38 96% 52%;
+  --st-color-success: 146 62% 35%;
+  --st-radius-control: 4px;
+  --st-radius-card: 6px;
+  --st-control-height: 36px;
+  --st-layout-section-gap: 24px;
+  --st-font-size-sm: 13px;
+  --st-font-size-base: 14px;
+  --st-line-height-lg: 1.5715;
+  --st-shadow-card: 0 4px 8px hsl(146 100% 10% / 8%);
+  --foreground: var(--st-color-text-primary);
+  --muted-foreground: var(--st-color-text-tertiary);
+  --background: var(--st-color-card-bg);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: hsl(var(--st-color-page-bg));
+  color: hsl(var(--st-color-text-primary));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--st-font-size-base);
+  line-height: 1.5715;
+  min-height: 100vh;
+}
+
+/* ====== 页面容器 ====== */
+.project-progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-layout-section-gap);
+  padding: var(--st-layout-section-gap);
+  min-height: 100%;
+}
+
+/* ====== PlatformViewToolbar ====== */
+.platform-view-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+  padding: 20px 24px;
+}
+.platform-view-toolbar__content { flex: 1; }
+.platform-view-toolbar__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--st-color-text-primary));
+  margin-bottom: 4px;
+}
+.platform-view-toolbar__desc {
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-tertiary));
+}
+.platform-view-toolbar__views {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ====== PlatformSegmented ====== */
+.platform-segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: hsl(var(--st-color-fill-disabled));
+  border-radius: var(--st-radius-control);
+  gap: 2px;
+}
+.platform-segmented__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-secondary));
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  border: none;
+  background: transparent;
+}
+.platform-segmented__item:hover { color: hsl(var(--st-color-text-primary)); }
+.platform-segmented__item.active {
+  background: hsl(var(--st-color-card-bg));
+  color: hsl(var(--st-color-text-primary));
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  font-weight: 500;
+}
+.platform-segmented__item svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ====== PlatformSurface ====== */
+.platform-surface {
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+  overflow: hidden;
+  padding: 20px 24px;
+}
+
+/* ====== PlatformSectionTitle ====== */
+.platform-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.platform-section-title__text {
+  font-size: 16px;
+  font-weight: 600;
+  color: hsl(var(--st-color-text-primary));
+}
+.platform-section-title__extra {
+  font-size: var(--st-font-size-sm);
+  color: hsl(var(--st-color-text-tertiary));
+}
+
+/* ====== 甘特图样式 ====== */
+.project-progress-gantt {
+  overflow-x: auto;
+}
+.project-progress-gantt__title-row {
+  margin-bottom: 20px;
+}
+.project-progress-gantt__month-head {
+  display: grid;
+  min-width: 1120px;
+  height: 32px;
+  align-items: center;
+  grid-template-columns: 220px repeat(12, minmax(64px, 1fr));
+  padding-inline: 14px;
+  color: #64748b;
+  background: hsl(var(--st-color-fill-selected));
+  border: 1px solid hsl(var(--st-color-border-subtle));
+  border-radius: var(--st-radius-control) var(--st-radius-control) 0 0;
+  font-size: var(--st-font-size-sm);
+}
+.project-progress-gantt__month-head strong {
+  color: hsl(var(--foreground));
+}
+.project-progress-gantt__month-head span {
+  text-align: center;
+}
+.project-progress-gantt__body {
+  min-width: 1120px;
+  border: 1px solid hsl(var(--st-color-border-subtle));
+  border-top: none;
+  border-radius: 0 0 var(--st-radius-control) var(--st-radius-control);
+}
+.project-progress-gantt__row {
+  display: grid;
+  grid-template-columns: 220px repeat(12, minmax(64px, 1fr));
+  align-items: center;
+  height: 38px;
+  padding-inline: 14px;
+  border-bottom: 1px solid hsl(var(--st-color-border-subtle));
+  font-size: var(--st-font-size-base);
+}
+.project-progress-gantt__row:last-child {
+  border-bottom: none;
+}
+.project-progress-gantt__name {
+  color: hsl(var(--st-color-text-primary));
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-progress-gantt__bar-container {
+  position: relative;
+  height: 16px;
+  background: transparent;
+}
+.project-progress-gantt__bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.project-progress-gantt__bar-label {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.project-progress-gantt__milestone {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #f59e0b;
+  transform: rotate(45deg) translateY(-2px);
+  z-index: 1;
+}
+.project-progress-gantt__progress-marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #f59e0b;
+  transform: rotate(45deg);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.project-progress-gantt__progress-label {
+  position: absolute;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  transform: rotate(-45deg);
+}
+
+/* ====== 看板样式 ====== */
+.project-progress-board {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.project-progress-board__column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 16px;
+  max-height: min(720px, calc(100vh - 220px));
+  overflow: hidden;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-card);
+}
+.project-progress-board__column-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: hsl(var(--foreground));
+}
+.project-progress-board__column-body {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.project-progress-board__column-header strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+.project-progress-board__column-header span:last-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding-inline: 6px;
+  color: #64748b;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.project-progress-board__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.project-progress-board__card {
+  padding: 16px;
+  background: hsl(var(--st-color-card-bg));
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-card);
+}
+.project-progress-board__card h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: hsl(var(--foreground));
+  font-size: var(--st-font-size-base);
+  font-weight: 700;
+  line-height: var(--st-line-height-lg);
+}
+.project-progress-board__card p {
+  margin: 12px 0 18px;
+  color: #64748b;
+  font-size: var(--st-font-size-sm);
+}
+.project-progress-board__track {
+  height: 6px;
+  overflow: hidden;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+.project-progress-board__track-fill {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+/* ====== 进度预警样式 ====== */
+.project-progress-warning-list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.project-progress-warning-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid hsl(var(--st-color-border-subtle));
+}
+.project-progress-warning-list li:first-child {
+  border-top: none;
+}
+.project-progress-warning-list strong {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+}
+.project-progress-warning-list span {
+  color: hsl(var(--muted-foreground));
+}
+.project-progress-empty {
+  padding: 20px 0;
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ====== 响应式 ====== */
+@media (max-width: 1400px) {
+  .project-progress-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .project-progress-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+  </style>
+</head>
+<body>
+<div class="project-progress-page">
+
+  <!-- PlatformViewToolbar -->
+  <div class="platform-view-toolbar">
+    <div class="platform-view-toolbar__content">
+      <div class="platform-view-toolbar__title">进度可视化跟踪</div>
+      <div class="platform-view-toolbar__desc">甘特图 / 看板 / 进度条</div>
+    </div>
+    <div class="platform-view-toolbar__views">
+      <div class="platform-segmented" id="view-segmented">
+        <button class="platform-segmented__item active" data-view="gantt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+            <line x1="15" y1="3" x2="15" y2="21"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="3" y1="15" x2="21" y2="15"/>
+          </svg>
+          甘特图
+        </button>
+        <button class="platform-segmented__item" data-view="board">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="18" rx="1"/>
+            <rect x="14" y="3" width="7" height="10" rx="1"/>
+            <rect x="14" y="17" width="7" height="4" rx="1"/>
+          </svg>
+          看板
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 甘特图区域 -->
+  <section class="platform-surface" id="gantt-section">
+    <div class="project-progress-gantt">
+      <div class="platform-section-title project-progress-gantt__title-row">
+        <span class="platform-section-title__text">项目甘特图</span>
+        <span class="platform-section-title__extra">2026年度</span>
+      </div>
+      <div class="project-progress-gantt__month-head">
+        <strong>项目名称</strong>
+        <span>1月</span><span>2月</span><span>3月</span><span>4月</span><span>5月</span><span>6月</span>
+        <span>7月</span><span>8月</span><span>9月</span><span>10月</span><span>11月</span><span>12月</span>
+      </div>
+      <div class="project-progress-gantt__body" id="gantt-body">
+        <!-- 甘特图行由 JS 动态生成 -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 看板区域 -->
+  <section id="board-section" style="display: none;">
+    <div class="project-progress-board" id="board-container">
+      <!-- 看板列由 JS 动态生成 -->
+    </div>
+  </section>
+
+  <!-- 进度预警区域 -->
+  <section class="platform-surface" id="warning-section">
+    <div class="platform-section-title">
+      <span class="platform-section-title__text">进度预警</span>
+    </div>
+    <ul class="project-progress-warning-list" id="warning-list">
+      <!-- 预警列表由 JS 动态生成 -->
+    </ul>
+  </section>
+
+</div>
+
+<script>
+// ====== 数据定义 ======
+const progressStatusMap = {
+  pending: { barColor: '#e2e8f0', label: '待启动', tokenColor: '#f59e0b' },
+  running: { barColor: '#00c853', label: '进行中', tokenColor: '#10b981' },
+  completed: { barColor: '#3b82f6', label: '已完成', tokenColor: '#3b82f6' },
+  archived: { barColor: '#94a3b8', label: '已归档', tokenColor: '#94a3b8' }
+};
+const progressStatusOrder = ['pending', 'running', 'completed', 'archived'];
+
+const progressRows = [
+  { id: 1, name: '城市中央商务区A栋综合体', department: '中建三局', manager: '张明远', status: 'running', progress: 55, startMonth: 4, endMonth: 12, color: '#00c853', milestones: [{ label: '开工', month: 4 }, { label: '主体完成', month: 10 }] },
+  { id: 2, name: '滨河路市政道路改造工程', department: '中铁十一局', manager: '刘海沧', status: 'pending', progress: 0, startMonth: 4, endMonth: 12, color: '#3b82f6', milestones: [{ label: '设计交底', month: 4 }] },
+  { id: 3, name: '湿地公园景观绿化工程', department: '东方园林', manager: '林雨桐', status: 'running', progress: 73, startMonth: 2, endMonth: 12, color: '#8b5cf6', milestones: [{ label: '苗木进场', month: 2 }, { label: '景观收口', month: 10 }] },
+  { id: 4, name: '老旧小区改造提升项目', department: '城建集团', manager: '王建华', status: 'pending', progress: 0, startMonth: 1, endMonth: 12, color: '#f59e0b', milestones: [{ label: '立项', month: 1 }] },
+  { id: 5, name: '城南污水处理厂扩容', department: '北控水务', manager: '杨志刚', status: 'running', progress: 42, startMonth: 6, endMonth: 12, color: '#ec4899', milestones: [{ label: '设备进场', month: 6 }] },
+  { id: 6, name: '市民广场地下停车场', department: '中建八局', manager: '周敏', status: 'running', progress: 38, startMonth: 5, endMonth: 12, color: '#10b981', milestones: [{ label: '基坑完成', month: 5 }] },
+  { id: 7, name: '园区保安保洁服务', department: '金螳螂装饰', manager: '陈思晴', status: 'completed', progress: 65, startMonth: 1, endMonth: 9, color: '#ef4444', milestones: [{ label: '服务进场', month: 1 }, { label: '季度验收', month: 5 }] },
+  { id: 8, name: '车辆安全整改工程', department: '中交一公局', manager: '赵国强', status: 'pending', progress: 0, startMonth: 2, endMonth: 12, color: '#6366f1', milestones: [{ label: '整改启动', month: 2 }] },
+  { id: 9, name: '科技产业园精装修项目', department: '金螳螂装饰', manager: '陈思涵', status: 'completed', progress: 100, startMonth: 1, endMonth: 12, color: '#3b82f6', milestones: [{ label: '竣工', month: 12 }] },
+  { id: 10, name: '跨河大桥新建工程', department: '中交二航局', manager: '孙立良', status: 'completed', progress: 100, startMonth: 1, endMonth: 12, color: '#3b82f6', milestones: [{ label: '验收', month: 12 }] },
+  { id: 11, name: '地铁3号线轨道维保', department: '中建三局', manager: '张明远', status: 'completed', progress: 100, startMonth: 1, endMonth: 12, color: '#3b82f6', milestones: [{ label: '验收', month: 12 }] },
+  { id: 12, name: '隧道照明升级工程', department: '东方园林', manager: '林雨桐', status: 'completed', progress: 100, startMonth: 1, endMonth: 12, color: '#3b82f6', milestones: [{ label: '验收', month: 12 }] },
+  { id: 13, name: '新区综合管廊工程', department: '中交二公司', manager: '赵国强', status: 'archived', progress: 100, startMonth: 1, endMonth: 12, color: '#94a3b8', milestones: [{ label: '归档', month: 12 }] },
+  { id: 14, name: '智慧园区弱电系统工程', department: '华为技术', manager: '何晓峰', status: 'archived', progress: 100, startMonth: 1, endMonth: 12, color: '#94a3b8', milestones: [{ label: '归档', month: 12 }] },
+  { id: 15, name: '特种设备年检整改', department: '中铁十二局', manager: '刘海涛', status: 'archived', progress: 100, startMonth: 1, endMonth: 12, color: '#94a3b8', milestones: [{ label: '归档', month: 12 }] }
+];
+
+// ====== 视图切换 ======
+let currentView = 'gantt';
+
+document.querySelectorAll('#view-segmented .platform-segmented__item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('#view-segmented .platform-segmented__item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+    currentView = this.getAttribute('data-view');
+    
+    document.getElementById('gantt-section').style.display = currentView === 'gantt' ? '' : 'none';
+    document.getElementById('board-section').style.display = currentView === 'board' ? '' : 'none';
+    document.getElementById('warning-section').style.display = currentView === 'gantt' ? '' : 'none';
+  });
+});
+
+// ====== 渲染甘特图 ======
+function renderGantt() {
+  const ganttBody = document.getElementById('gantt-body');
+  const displayRows = progressRows.slice(0, 8); // 甘特图只显示前8条
+  
+  ganttBody.innerHTML = displayRows.map(row => {
+    const duration = row.endMonth - row.startMonth + 1;
+    
+    // 计算里程碑位置（相对于条形图）
+    const milestoneHtml = row.milestones.map(m => {
+      const mOffset = ((m.month - row.startMonth) / duration) * 100;
+      return `<div class="project-progress-gantt__milestone" style="left: calc(${mOffset}% - 6px);" title="${m.label}"></div>`;
+    }).join('');
+    
+    // 进度标记（相对于条形图）
+    let progressMarkerHtml = '';
+    if (row.progress > 0 && row.progress < 100) {
+      const progressOffset = row.progress;
+      progressMarkerHtml = `
+        <div class="project-progress-gantt__progress-marker" style="left: calc(${progressOffset}% - 7px);">
+          <span class="project-progress-gantt__progress-label">${row.progress}%</span>
+        </div>`;
+    }
+    
+    // 生成月份单元格
+    let monthCells = '';
+    for (let i = 0; i < 12; i++) {
+      const monthNum = i + 1;
+      if (monthNum === row.startMonth) {
+        monthCells += `
+          <div class="project-progress-gantt__bar-container" style="grid-column: ${i + 1} / span ${duration};">
+            <div class="project-progress-gantt__bar" style="left: 0; width: 100%; background: ${row.color};">
+              <span class="project-progress-gantt__bar-label">${row.progress > 0 ? row.progress + '%' : ''}</span>
+            </div>
+            ${milestoneHtml}
+            ${progressMarkerHtml}
+          </div>`;
+      } else if (monthNum > row.startMonth && monthNum <= row.endMonth) {
+        // 跳过，已被 grid-column 覆盖
+      } else {
+        monthCells += `<div class="project-progress-gantt__bar-container"></div>`;
+      }
+    }
+    
+    return `
+      <div class="project-progress-gantt__row">
+        <span class="project-progress-gantt__name">${row.name}</span>
+        ${monthCells}
+      </div>`;
+  }).join('');
+}
+
+// ====== 渲染看板 ======
+function renderBoard() {
+  const boardContainer = document.getElementById('board-container');
+  
+  boardContainer.innerHTML = progressStatusOrder.map(status => {
+    const statusInfo = progressStatusMap[status];
+    const records = progressRows.filter(r => r.status === status);
+    
+    const cardsHtml = records.map(record => {
+      const progressWidth = record.status === 'pending' ? '0%' : Math.min(record.progress, 100) + '%';
+      return `
+        <article class="project-progress-board__card">
+          <h2>${record.name}</h2>
+          <p>${record.department} · ${record.manager}</p>
+          <div class="project-progress-board__track">
+            <span class="project-progress-board__track-fill" style="background: ${statusInfo.barColor}; width: ${progressWidth};"></span>
+          </div>
+        </article>`;
+    }).join('');
+    
+    return `
+      <section class="project-progress-board__column">
+        <header class="project-progress-board__column-header">
+          <span class="project-progress-board__dot" style="background-color: ${statusInfo.tokenColor};"></span>
+          <strong>${statusInfo.label}</strong>
+          <span>${records.length}</span>
+        </header>
+        <div class="project-progress-board__column-body">
+          ${cardsHtml}
+        </div>
+      </section>`;
+  }).join('');
+}
+
+// ====== 渲染进度预警 ======
+function renderWarnings() {
+  const warningList = document.getElementById('warning-list');
+  const warnings = progressRows
+    .filter(row => row.status === 'running' && row.progress < 45)
+    .map(row => ({
+      id: row.id,
+      name: row.name,
+      reason: `当前进度 ${row.progress}%，需关注节点推进。`
+    }));
+  
+  if (warnings.length === 0) {
+    warningList.innerHTML = '<li class="project-progress-empty">暂无进度滞后项目</li>';
+  } else {
+    warningList.innerHTML = warnings.map(w => `
+      <li>
+        <strong>${w.name}</strong>
+        <span>${w.reason}</span>
+      </li>
+    `).join('');
+  }
+}
+
+// ====== 初始化 ======
+renderGantt();
+renderBoard();
+renderWarnings();
+</script>
+</body>
+</html>

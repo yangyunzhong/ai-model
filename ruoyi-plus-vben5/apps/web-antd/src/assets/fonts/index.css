@@ -1,0 +1,19 @@
+@font-face {
+  font-family: 'ST Number';
+  src: url('./DIN Alternate Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --st-font-family-number:
+    'ST Number', 'DIN Alternate', 'Bahnschrift', 'Roboto Mono',
+    'SFMono-Regular', var(--font-family);
+}
+
+.st-number-font,
+[data-number-font='true'] {
+  font-family: var(--st-font-family-number);
+  font-variant-numeric: lining-nums tabular-nums;
+}

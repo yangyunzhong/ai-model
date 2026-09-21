@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>工作台首页 - 原型预览</title>
+  <link rel="stylesheet" href="./workbench-styles.css" />
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <header class="top-nav">
+    <div class="top-nav__left">
+      <span class="top-nav__logo">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </span>
+      <span class="top-nav__brand">工作平台</span>
+      <span class="top-nav__badge">应用</span>
+    </div>
+    <nav class="top-nav__menu">
+      <a class="top-nav__item top-nav__item--active">首页</a>
+      <a class="top-nav__item">待办</a>
+      <a class="top-nav__item">消息</a>
+      <a class="top-nav__item">日程</a>
+      <a class="top-nav__item">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" opacity="0.85">
+          <rect x="4" y="4" width="16" height="16" rx="2"/>
+        </svg>
+      </a>
+      <a class="top-nav__item">通讯录</a>
+    </nav>
+  </header>
+
+  <!-- 用户问候区 -->
+  <section class="greeting">
+    <div class="greeting__avatar">
+      <svg viewBox="0 0 64 64" width="56" height="56" fill="currentColor">
+        <rect x="8" y="8" width="48" height="48" rx="6" opacity="0.2"/>
+        <path d="M20 24h14v6h8v6h-8v6h14v-24H20z"/>
+        <rect x="24" y="30" width="4" height="4" fill="currentColor" opacity="0.6"/>
+        <rect x="30" y="30" width="4" height="4" fill="currentColor" opacity="0.6"/>
+        <rect x="36" y="30" width="4" height="4" fill="currentColor" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="greeting__text">
+      <div class="greeting__title">
+        中午好，中软系统管理员
+        <span class="greeting__btn">个人中心</span>
+      </div>
+      <div class="greeting__subtitle">
+        欢迎使用统一工作平台，距离修改密码还有34天
+      </div>
+    </div>
+  </section>
+
+  <!-- 主内容区 -->
+  <main class="content">
+    <!-- 左栏 -->
+    <div class="content__left">
+      <!-- 日程卡片 -->
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">日程</h3>
+          <div class="card__actions">
+            <a class="card__link">更多</a>
+            <a class="card__btn-add">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+                <rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <rect x="2" y="6" width="12" height="1" stroke="currentColor" stroke-width="0.8"/>
+                <text x="8" y="11" text-anchor="middle" font-size="7" fill="currentColor">+</text>
+              </svg>
+              添加日程
+            </a>
+          </div>
+        </div>
+
+        <div class="calendar">
+          <div class="calendar__month">
+            <a class="calendar__nav">&larr;</a>
+            <span>2026-05</span>
+            <a class="calendar__nav calendar__nav--right">&rarr;</a>
+          </div>
+          <div class="calendar__weekdays">
+            <span>周日</span>
+            <span>周一</span>
+            <span>周二</span>
+            <span>周三</span>
+            <span>周四</span>
+            <span>周五</span>
+            <span>周六</span>
+          </div>
+          <div class="calendar__days">
+            <div class="calendar__day calendar__day--muted">
+              <div class="calendar__day-num">31</div>
+              <div class="calendar__day-sub">十五</div>
+            </div>
+            <div class="calendar__day">
+              <div class="calendar__day-num">01</div>
+              <div class="calendar__day-sub">十六</div>
+            </div>
+            <div class="calendar__day">
+              <div class="calendar__day-num">02</div>
+              <div class="calendar__day-sub">十七</div>
+            </div>
+            <div class="calendar__day">
+              <div class="calendar__day-num">03</div>
+              <div class="calendar__day-sub">十八</div>
+            </div>
+            <div class="calendar__day calendar__day--active">
+              <div class="calendar__day-num">04</div>
+              <div class="calendar__day-sub">十九</div>
+            </div>
+            <div class="calendar__day">
+              <div class="calendar__day-num">05</div>
+              <div class="calendar__day-sub">芒种</div>
+            </div>
+            <div class="calendar__day">
+              <div class="calendar__day-num">06</div>
+              <div class="calendar__day-sub">廿一</div>
+            </div>
+          </div>
+          <div class="calendar__empty">暂无日程</div>
+        </div>
+      </div>
+
+      <!-- 待办卡片 -->
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">待办</h3>
+          <div class="card__actions">
+            <a class="card__link">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2">
+                <path d="M8 3v5l3 3" />
+                <circle cx="8" cy="8" r="5" />
+              </svg>
+              刷新
+            </a>
+            <a class="card__link">更多</a>
+          </div>
+        </div>
+        <div class="todo__tabs">
+          <span class="todo__tab todo__tab--active">· 全部待办(336)</span>
+        </div>
+        <ul class="todo__list">
+          <li class="todo__item">
+            <span class="todo__type">[领料单]</span>
+            <span class="todo__content">请审批：[WR2025032701] 测试领料</span>
+            <span class="todo__time">2025-03-27 10:45</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[领料单]</span>
+            <span class="todo__content">请审批：[WR2025030704] 11</span>
+            <span class="todo__time">2025-03-07 11:48</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警处置]</span>
+            <span class="todo__content">[滞留]预警事件待处置</span>
+            <span class="todo__time">47分钟前</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警处置]</span>
+            <span class="todo__content">[UWB-发生跌落告警]预警事件待处置</span>
+            <span class="todo__time">2小时前</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警处置]</span>
+            <span class="todo__content">[UWB-发生跌落告警]预警事件待处置</span>
+            <span class="todo__time">2小时前</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警确认]</span>
+            <span class="todo__content">[设备离线预警(定时任务判定)]预警事...</span>
+            <span class="todo__time">8小时前</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警确认]</span>
+            <span class="todo__content">[设备离线预警(定时任务判定)]预警事...</span>
+            <span class="todo__time">8小时前</span>
+          </li>
+          <li class="todo__item">
+            <span class="todo__type">[预警确认]</span>
+            <span class="todo__content">[设备离线预警(定时任务判定)]预警事...</span>
+            <span class="todo__time">8小时前</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 右栏 -->
+    <div class="content__right">
+      <!-- 快捷入口 -->
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">快捷入口</h3>
+          <div class="card__actions">
+            <a class="card__link">设置</a>
+          </div>
+        </div>
+        <div class="quick-entry">
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--blue">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <rect x="4" y="5" width="24" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="8" y1="11" x2="24" y2="11" stroke="currentColor" stroke-width="1.2"/>
+                <line x1="8" y1="16" x2="24" y2="16" stroke="currentColor" stroke-width="1.2"/>
+                <line x1="8" y1="21" x2="18" y2="21" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">检修知识库</span>
+          </div>
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--blue2">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <path d="M6 8l10-4 10 4v10l-10 6-10-6V8z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M12 13l4 2 4-2" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                <line x1="16" y1="12" x2="16" y2="22" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">工单看板</span>
+          </div>
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--green">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <rect x="4" y="9" width="16" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="12" cy="14.5" r="2" fill="currentColor"/>
+                <path d="M20 9l8 4v11h-8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">视频监控</span>
+          </div>
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--purple">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <rect x="5" y="5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="17" y="5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="5" y="17" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="17" y="17" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="10" y1="10" x2="22" y2="22" stroke="currentColor" stroke-width="1.2"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">三维数字化</span>
+          </div>
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--orange">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <circle cx="16" cy="18" r="7" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M16 4v7" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="16" cy="4" r="1.5" fill="currentColor"/>
+                <path d="M16 18l3.5 3.5" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">应急一张图</span>
+          </div>
+          <div class="quick-entry__item">
+            <div class="quick-entry__icon quick-entry__icon--teal">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="currentColor">
+                <path d="M5 22V14l6-4 6 4 6-4 6 4v8h-4v-6l-2 2-2-2-2 2-2-2-2 2v6z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <circle cx="25" cy="20" r="2" fill="currentColor"/>
+                <line x1="23" y1="20" x2="27" y2="20" stroke="currentColor" stroke-width="0.8"/>
+              </svg>
+            </div>
+            <span class="quick-entry__label">运行一张图</span>
+          </div>
+        </div>
+        <div class="quick-entry__pager">
+          <span class="quick-entry__dot"></span>
+          <span class="quick-entry__dot quick-entry__dot--active"></span>
+          <span class="quick-entry__dot"></span>
+        </div>
+      </div>
+
+      <!-- 应用入口 -->
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">应用入口</h3>
+          <div class="card__actions">
+            <a class="card__link">密码设置</a>
+          </div>
+        </div>
+        <div class="app-entry">
+          <div class="app-entry__tabs">
+            <div class="app-entry__tab app-entry__tab--active">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M3 1h10v4H3zM3 7h10v4H3zM3 13h10v2H3z"/></svg>
+              常用
+            </div>
+            <div class="app-entry__tab">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
+              基建
+            </div>
+            <div class="app-entry__tab">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><path d="M8 1l6 4v6l-6 4-6-4V5l6-4z"/></svg>
+              生产
+            </div>
+            <div class="app-entry__tab">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M8 2l6 3v6l-6 3-6-3V5l6-3z"/></svg>
+              安全
+            </div>
+            <div class="app-entry__tab">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><circle cx="8" cy="8" r="6"/></svg>
+              经营
+            </div>
+            <div class="app-entry__tab">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="1.5"/></svg>
+              办公
+            </div>
+            <div class="app-entry__tab-more">
+              <span>›</span>
+            </div>
+          </div>
+
+          <div class="app-entry__grid">
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--1">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M3 21V9l9-6 9 6v12h-5v-7h-8v7H3z" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">智慧工地</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--2">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="8" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="8" y1="14" x2="14" y2="14" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">综合管理</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--3">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M4 5h16v3H4zM4 10h16v3H4zM4 15h16v4H4z" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">滨海湾OA系统</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--4">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">经营管理</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--5">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <rect x="3" y="7" width="18" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <circle cx="8" cy="12" r="2" fill="currentColor"/>
+                  <circle cx="16" cy="12" r="2" fill="currentColor"/>
+                </svg>
+              </div>
+              <span class="app-card__name">生产实时数据系统...</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--6">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">人力资源管理</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--7">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M12 3L4 8l8 5 8-5-8-5zM4 12l8 5 8-5M4 16l8 5 8-5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">应急管理</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--8">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <circle cx="17" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M3 21c0-3 3-5 6-5s6 2 6 5M14 20c0-2 2-3.5 4-3.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">人员管理</span>
+            </div>
+            <div class="app-card">
+              <div class="app-card__icon app-card__icon--9">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M5 4h14v3H5zM5 9h14v11H5z" fill="none" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" stroke-width="1.3"/>
+                  <line x1="9" y1="16" x2="15" y2="16" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+              </div>
+              <span class="app-card__name">技术监督报表</span>
+            </div>
+            <div class="app-card app-card--add">
+              <div class="app-card__icon app-card__icon--add">+</div>
+              <span class="app-card__name">常用设置</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 通知消息 -->
+      <div class="card">
+        <div class="card__header">
+          <h3 class="card__title">通知消息</h3>
+          <div class="card__actions">
+            <a class="card__link">
+              <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.2">
+                <path d="M8 3v5l3 3" />
+                <circle cx="8" cy="8" r="5" />
+              </svg>
+              刷新
+            </a>
+            <a class="card__link">更多</a>
+          </div>
+        </div>
+
+        <ul class="notice__list">
+          <li class="notice__item">
+            <div class="notice__source">智慧电厂</div>
+            <div class="notice__content">
+              <div class="notice__title">
+                2026-06-02设备部客餐审核通过
+                <span class="notice__badge">刷新</span>
+              </div>
+              <div class="notice__desc">
+                智慧电厂-2026-06-02设备部的1份客餐申请单已通过，请按照要求备餐。
+              </div>
+            </div>
+            <div class="notice__time">1小时前</div>
+          </li>
+          <li class="notice__item">
+            <div class="notice__source">智慧电厂</div>
+            <div class="notice__content">
+              <div class="notice__title">
+                2026-06-03设备部客餐审核通过
+              </div>
+              <div class="notice__desc">
+                智慧电厂-2026-06-03设备部的1份客餐申请单已通过，请按照要求备餐。
+              </div>
+            </div>
+            <div class="notice__time">1小时前</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

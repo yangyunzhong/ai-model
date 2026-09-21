@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>合同管理 - 深圳地铁</title>
+  <style>
+    /* CSS Reset & Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --st-color-brand: 146 100% 30%;
+      --st-color-brand-value: #009943;
+      --st-color-brand-light: #e6f7ef;
+      --st-color-brand-dark: #007a34;
+      
+      /* 状态颜色 */
+      --color-success: #52c41a;
+      --color-warning: #faad14;
+      --color-error: #ff4d4f;
+      --color-info: #1890ff;
+      
+      /* 文本颜色 */
+      --text-primary: rgba(0, 0, 0, 0.85);
+      --text-secondary: rgba(0, 0, 0, 0.65);
+      --text-tertiary: rgba(0, 0, 0, 0.45);
+      
+      /* 边框和背景 */
+      --border-color: #e8e8e8;
+      --bg-page: #f5f5f5;
+      --bg-card: #ffffff;
+      
+      /* 间距 */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      /* 圆角 */
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      
+      /* 阴影 */
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      min-height: 100vh;
+    }
+
+    /* PlatformViewToolbar */
+    .platform-view-toolbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      padding: var(--spacing-md) var(--spacing-lg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .toolbar-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+    }
+
+    .toolbar-title::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: var(--st-color-brand-value);
+      border-radius: 2px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .btn {
+      padding: 6px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+    }
+
+    .btn:hover {
+      border-color: var(--st-color-brand-value);
+      color: var(--st-color-brand-value);
+    }
+
+    .btn-primary {
+      background: var(--st-color-brand-value);
+      border-color: var(--st-color-brand-value);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--st-color-brand-dark);
+      border-color: var(--st-color-brand-dark);
+      color: #fff;
+    }
+
+    /* 主容器 */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--spacing-lg);
+    }
+
+    /* 统计卡片网格 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s;
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .stat-card-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .stat-card-value {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--st-color-brand-value);
+      line-height: 1.2;
+    }
+
+    .stat-card-suffix {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      margin-left: var(--spacing-xs);
+    }
+
+    /* 合同卡片网格 */
+    .contracts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--spacing-md);
+    }
+
+    .contract-card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-color);
+      transition: all 0.3s;
+    }
+
+    .contract-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      border-color: var(--st-color-brand-value);
+    }
+
+    /* 合同卡片头部 */
+    .contract-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .contract-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+      margin-right: var(--spacing-md);
+      line-height: 1.4;
+    }
+
+    .contract-status {
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .status-active {
+      background: #e6f7ff;
+      color: #1890ff;
+    }
+
+    .status-completed {
+      background: #f6ffed;
+      color: #52c41a;
+    }
+
+    .status-pending {
+      background: #fff7e6;
+      color: #faad14;
+    }
+
+    .status-overdue {
+      background: #fff2f0;
+      color: #ff4d4f;
+    }
+
+    /* 合同金额 */
+    .contract-amount {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .amount-label {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-right: var(--spacing-sm);
+    }
+
+    .amount-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .amount-unit {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-left: 2px;
+    }
+
+    /* 付款节点进度条 */
+    .payment-nodes {
+      margin-top: var(--spacing-md);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .payment-nodes-title {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .payment-progress {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .nodes-container {
+      display: flex;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .node-item {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: #f0f0f0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .node-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .node-completed {
+      background: var(--st-color-brand-value);
+    }
+
+    .node-pending {
+      background: #d9d9d9;
+    }
+
+    .node-current {
+      background: var(--color-warning);
+    }
+
+    /* 节点标签 */
+    .nodes-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .node-label {
+      text-align: center;
+      flex: 1;
+    }
+
+    /* 合同卡片底部 */
+    .contract-footer {
+      margin-top: var(--spacing-md);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .contract-date {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .contract-actions {
+      display: flex;
+      gap: var(--spacing-xs);
+    }
+
+    .action-link {
+      font-size: 13px;
+      color: var(--st-color-brand-value);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .action-link:hover {
+      color: var(--st-color-brand-dark);
+    }
+
+    /* 响应式 */
+    @media (max-width: 1200px) {
+      .contracts-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid,
+      .contracts-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .platform-view-toolbar {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        align-items: flex-start;
+      }
+      
+      .toolbar-actions {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- PlatformViewToolbar -->
+  <div class="platform-view-toolbar">
+    <div class="toolbar-title">合同管理</div>
+    <div class="toolbar-actions">
+      <button class="btn">
+        <span>🔍</span>
+        <span>搜索</span>
+      </button>
+      <button class="btn">
+        <span>📊</span>
+        <span>导出</span>
+      </button>
+      <button class="btn btn-primary">
+        <span>➕</span>
+        <span>新建合同</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 主容器 -->
+  <div class="main-container">
+    <!-- 统计卡片网格 -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card-label">合同总数</div>
+        <div class="stat-card-value">
+          6
+          <span class="stat-card-suffix">份</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">合同总额</div>
+        <div class="stat-card-value">
+          2,580
+          <span class="stat-card-suffix">万元</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">已付款金额</div>
+        <div class="stat-card-value">
+          1,645
+          <span class="stat-card-suffix">万元</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 合同卡片网格 -->
+    <div class="contracts-grid">
+      <!-- 合同卡片 1 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">深圳地铁14号线车辆采购合同</div>
+          <div class="contract-status status-active">执行中</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">680</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 340万 / 680万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-current" style="width: 50%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">预付款</span>
+            <span class="node-label">到货款</span>
+            <span class="node-label">验收款</span>
+            <span class="node-label">质保金</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">签订日期：2024-01-15</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合同卡片 2 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">岗厦北枢纽改造工程合同</div>
+          <div class="contract-status status-completed">已完成</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">520</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 520万 / 520万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">预付款</span>
+            <span class="node-label">进度款</span>
+            <span class="node-label">验收款</span>
+            <span class="node-label">尾款</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">签订日期：2023-08-20</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合同卡片 3 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">11号线信号系统升级合同</div>
+          <div class="contract-status status-active">执行中</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">450</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 225万 / 450万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">首付款</span>
+            <span class="node-label">设备款</span>
+            <span class="node-label">调试款</span>
+            <span class="node-label">尾款</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">签订日期：2024-03-10</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合同卡片 4 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">前海湾站装修工程合同</div>
+          <div class="contract-status status-pending">待审批</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">380</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 0万 / 380万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">预付款</span>
+            <span class="node-label">进度款</span>
+            <span class="node-label">尾款</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">预计签订：2024-06-01</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合同卡片 5 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">6号线支线机电设备采购</div>
+          <div class="contract-status status-overdue">已逾期</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">320</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 240万 / 320万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-current" style="width: 75%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">预付款</span>
+            <span class="node-label">发货款</span>
+            <span class="node-label">安装款</span>
+            <span class="node-label">尾款</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">签订日期：2023-11-05</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 合同卡片 6 -->
+      <div class="contract-card">
+        <div class="contract-header">
+          <div class="contract-name">福田站安检设备更新合同</div>
+          <div class="contract-status status-active">执行中</div>
+        </div>
+        <div class="contract-amount">
+          <span class="amount-label">合同金额</span>
+          <span class="amount-value">230</span>
+          <span class="amount-unit">万元</span>
+        </div>
+        <div class="payment-nodes">
+          <div class="payment-nodes-title">
+            <span>付款节点</span>
+            <span class="payment-progress">已付 115万 / 230万</span>
+          </div>
+          <div class="nodes-container">
+            <div class="node-item">
+              <div class="node-fill node-completed" style="width: 100%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-current" style="width: 50%"></div>
+            </div>
+            <div class="node-item">
+              <div class="node-fill node-pending" style="width: 0%"></div>
+            </div>
+          </div>
+          <div class="nodes-labels">
+            <span class="node-label">首付款</span>
+            <span class="node-label">到货款</span>
+            <span class="node-label">尾款</span>
+          </div>
+        </div>
+        <div class="contract-footer">
+          <div class="contract-date">签订日期：2024-02-28</div>
+          <div class="contract-actions">
+            <span class="action-link">查看详情</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

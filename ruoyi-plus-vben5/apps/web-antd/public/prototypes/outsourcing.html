@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目信息管理 - 委外项目管理系统</title>
+  <style>
+/* ====== 深圳地铁平台设计令牌（与真实前端完全一致）====== */
+:root {
+  --st-color-brand: 146 100% 30%;
+  --st-color-brand-hover: 146 100% 34%;
+  --st-color-brand-active: 146 100% 26%;
+  --st-color-brand-outline: 146 100% 30% / 30%;
+  --st-color-page-bg: 220 20% 95%;
+  --st-color-card-bg: 0 0% 100%;
+  --st-color-text-primary: 223 10% 13%;
+  --st-color-text-secondary: 220 9% 28%;
+  --st-color-text-tertiary: 222 5% 48%;
+  --st-color-text-placeholder: 223 10% 13% / 40%;
+  --st-color-border-subtle: 220 23% 95%;
+  --st-color-border-control: 220 13% 91%;
+  --st-color-fill-selected: 146 100% 30% / 10%;
+  --st-color-fill-disabled: 218 13% 86%;
+  --st-color-danger: 355 76% 59%;
+  --st-color-warning: 38 96% 52%;
+  --st-color-success: 146 62% 35%;
+  --st-radius-control: 4px;
+  --st-radius-card: 6px;
+  --st-control-height: 36px;
+  --st-layout-section-gap: 24px;
+  --st-font-size-sm: 13px;
+  --st-font-size-base: 14px;
+  --st-shadow-card: 0 4px 8px hsl(146 100% 10% / 8%);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: hsl(var(--st-color-page-bg));
+  color: hsl(var(--st-color-text-primary));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: var(--st-font-size-base);
+  line-height: 1.5715;
+  min-height: 100vh;
+}
+a { color: hsl(var(--st-color-brand)); text-decoration: none; }
+a:hover { color: hsl(var(--st-color-brand-hover)); }
+
+/* ====== 页面容器 ====== */
+.project-information-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-layout-section-gap);
+  padding: var(--st-layout-section-gap);
+  min-height: 100%;
+}
+
+/* ====== PlatformViewToolbar ====== */
+.platform-view-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.platform-view-toolbar__content { flex: 1; }
+.platform-view-toolbar__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: hsl(var(--st-color-text-primary));
+  margin-bottom: 4px;
+}
+.platform-view-toolbar__desc {
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-tertiary));
+}
+
+/* ====== PlatformQueryPanel ====== */
+.platform-query-panel {
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+  padding: 20px 24px 0;
+}
+.platform-query-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 24px;
+}
+.platform-query-panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 0 16px;
+  margin-top: 8px;
+  border-top: 1px dashed hsl(var(--st-color-border-control));
+}
+
+/* ====== PlatformFormItem ====== */
+.platform-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.platform-form-item__label {
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-secondary));
+  line-height: 1.5715;
+}
+.platform-form-item__label.required::before {
+  content: "*";
+  color: hsl(var(--st-color-danger));
+  margin-right: 4px;
+}
+
+/* ====== 表单控件 ====== */
+.platform-input, .platform-select {
+  width: 100%;
+  height: var(--st-control-height);
+  padding: 4px 11px;
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-control);
+  background: hsl(var(--st-color-card-bg));
+  color: hsl(var(--st-color-text-primary));
+  font-size: var(--st-font-size-base);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.platform-input::placeholder { color: hsl(var(--st-color-text-placeholder)); }
+.platform-input:hover, .platform-select:hover { border-color: hsl(var(--st-color-brand)); }
+.platform-input:focus, .platform-select:focus {
+  border-color: hsl(var(--st-color-brand));
+  box-shadow: 0 0 0 2px hsl(var(--st-color-brand-outline));
+}
+.platform-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 32px;
+}
+
+/* ====== 按钮 ====== */
+.platform-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--st-control-height);
+  padding: 4px 15px;
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-control);
+  background: hsl(var(--st-color-card-bg));
+  color: hsl(var(--st-color-text-primary));
+  font-size: var(--st-font-size-base);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.platform-button:hover:not(:disabled) {
+  border-color: hsl(var(--st-color-brand));
+  color: hsl(var(--st-color-brand));
+}
+.platform-button--primary {
+  background: hsl(var(--st-color-brand));
+  color: #fff;
+  border-color: hsl(var(--st-color-brand));
+}
+.platform-button--primary:hover:not(:disabled) {
+  background: hsl(var(--st-color-brand-hover));
+  border-color: hsl(var(--st-color-brand-hover));
+  color: #fff;
+}
+.platform-button--link {
+  background: transparent;
+  border: none;
+  color: hsl(var(--st-color-brand));
+  padding: 0 6px;
+  height: auto;
+}
+.platform-button--link:hover { color: hsl(var(--st-color-brand-hover)); text-decoration: underline; }
+.platform-button--link.platform-button--danger { color: hsl(var(--st-color-danger)); }
+.platform-button--small { height: 28px; padding: 0 8px; font-size: var(--st-font-size-sm); }
+.platform-button:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ====== PlatformSurface（表格容器）====== */
+.platform-surface {
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  box-shadow: var(--st-shadow-card);
+  overflow: hidden;
+}
+
+/* ====== PlatformTableToolbar ====== */
+.platform-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid hsl(var(--st-color-border-subtle));
+}
+.platform-table-toolbar__search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
+}
+.platform-table-toolbar__search {
+  position: relative;
+  width: 100%;
+}
+.platform-table-toolbar__search-input {
+  width: 100%;
+  height: var(--st-control-height);
+  padding: 4px 11px 4px 36px;
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-control);
+  background: hsl(var(--st-color-card-bg));
+  font-size: var(--st-font-size-base);
+  font-family: inherit;
+  outline: none;
+}
+.platform-table-toolbar__search-input:focus {
+  border-color: hsl(var(--st-color-brand));
+  box-shadow: 0 0 0 2px hsl(var(--st-color-brand-outline));
+}
+.platform-table-toolbar__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: hsl(var(--st-color-text-tertiary));
+}
+.platform-table-toolbar__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+.platform-table-toolbar__tool-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--st-radius-control);
+  border: 1px solid transparent;
+  background: transparent;
+  color: hsl(var(--st-color-text-secondary));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.platform-table-toolbar__tool-btn:hover {
+  color: hsl(var(--st-color-brand));
+  border-color: hsl(var(--st-color-brand-outline));
+  background: hsl(var(--st-color-fill-selected));
+}
+.platform-table-toolbar__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ====== PlatformTable ====== */
+.platform-table { width: 100%; border-collapse: collapse; }
+.platform-table thead th {
+  background: hsl(var(--st-color-border-subtle));
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-primary));
+  border-bottom: 1px solid hsl(var(--st-color-border-subtle));
+  white-space: nowrap;
+}
+.platform-table tbody td {
+  padding: 14px 16px;
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-secondary));
+  border-bottom: 1px solid hsl(var(--st-color-border-subtle));
+  vertical-align: middle;
+}
+.platform-table tbody tr:hover { background: #f3f4fa; }
+.platform-table tbody tr:last-child td { border-bottom: none; }
+
+/* 项目名称单元格 */
+.project-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.project-name-cell strong { color: hsl(var(--st-color-text-primary)); font-weight: 500; }
+.project-name-cell span { color: hsl(var(--st-color-text-tertiary)); font-size: var(--st-font-size-sm); }
+
+/* 操作列 */
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.action-cell .divider {
+  width: 1px;
+  height: 14px;
+  background: hsl(var(--st-color-border-control));
+  margin: 0 4px;
+}
+
+/* ====== PlatformStatusTag ====== */
+.platform-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  border: 1px solid transparent;
+}
+.platform-status-tag--dot::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.platform-status-tag--pending { background: #fafafa; border-color: hsl(var(--st-color-border-control)); color: hsl(var(--st-color-text-tertiary)); }
+.platform-status-tag--processing { background: hsl(var(--st-color-fill-selected)); border-color: hsl(var(--st-color-brand-outline)); color: hsl(var(--st-color-brand)); }
+.platform-status-tag--completed { background: #f6ffed; border-color: #b7eb8f; color: hsl(var(--st-color-success)); }
+.platform-status-tag--archived { background: #fffbe6; border-color: #ffe58f; color: hsl(var(--st-color-warning)); }
+
+/* Ant Design Tag */
+.ant-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  border: 1px solid transparent;
+}
+.ant-tag-green { background: #f6ffed; border-color: #b7eb8f; color: hsl(var(--st-color-success)); }
+
+/* ====== 分页 ====== */
+.platform-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+}
+.platform-pagination__info { font-size: var(--st-font-size-base); color: hsl(var(--st-color-text-tertiary)); }
+.platform-pagination__controls { display: flex; gap: 8px; align-items: center; }
+.platform-pagination__btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--st-radius-control);
+  background: hsl(var(--st-color-card-bg));
+  border: 1px solid hsl(var(--st-color-border-control));
+  color: hsl(var(--st-color-text-primary));
+  cursor: pointer;
+  font-size: var(--st-font-size-base);
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.platform-pagination__btn:hover:not(:disabled) { border-color: hsl(var(--st-color-brand)); color: hsl(var(--st-color-brand)); }
+.platform-pagination__btn.active { border-color: hsl(var(--st-color-brand)); color: hsl(var(--st-color-brand)); font-weight: 600; }
+.platform-pagination__btn:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ====== PlatformModal ====== */
+.platform-modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.platform-modal-mask.show { display: flex; }
+.platform-modal {
+  background: hsl(var(--st-color-card-bg));
+  border-radius: var(--st-radius-card);
+  width: 100%;
+  max-width: 720px;
+  box-shadow: 0 6px 16px 0 rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05);
+  animation: modalIn 0.2s ease-out;
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+}
+@keyframes modalIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.platform-modal__header {
+  padding: 16px 24px;
+  border-bottom: 1px solid hsl(var(--st-color-border-subtle));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.platform-modal__title { font-size: 16px; font-weight: 600; color: hsl(var(--st-color-text-primary)); }
+.platform-modal__close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--st-radius-control);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: hsl(var(--st-color-text-tertiary));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.platform-modal__close:hover { background: hsl(var(--st-color-fill-disabled)); color: hsl(var(--st-color-text-primary)); }
+.platform-modal__body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+.platform-modal__footer {
+  padding: 12px 24px;
+  border-top: 1px solid hsl(var(--st-color-border-subtle));
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ====== PlatformSegmented ====== */
+.platform-segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: hsl(var(--st-color-fill-disabled));
+  border-radius: var(--st-radius-control);
+  gap: 2px;
+  margin-bottom: 20px;
+}
+.platform-segmented__item {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--st-color-text-secondary));
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.platform-segmented__item:hover { color: hsl(var(--st-color-text-primary)); }
+.platform-segmented__item.active {
+  background: hsl(var(--st-color-card-bg));
+  color: hsl(var(--st-color-text-primary));
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  font-weight: 500;
+}
+
+/* ====== 表单网格 ====== */
+.project-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 24px;
+}
+.project-form-item--full { grid-column: 1 / -1; }
+
+/* ====== 导出菜单 ====== */
+.project-export-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: hsl(var(--st-color-card-bg));
+  border: 1px solid hsl(var(--st-color-border-control));
+  border-radius: var(--st-radius-card);
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100;
+  display: none;
+}
+.project-export-menu.show { display: block; }
+.project-export-menu__item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: var(--st-font-size-sm);
+  color: hsl(var(--st-color-text-primary));
+  transition: background 0.16s;
+}
+.project-export-menu__item:hover { background: hsl(var(--st-color-fill-selected)); }
+
+/* ====== 响应式 ====== */
+@media (max-width: 1200px) {
+  .platform-query-panel__grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .platform-query-panel__grid, .project-form-grid { grid-template-columns: 1fr; }
+}
+  </style>
+</head>
+<body>
+<div class="project-information-page">
+
+  <!-- PlatformViewToolbar -->
+  <div class="platform-view-toolbar">
+    <div class="platform-view-toolbar__content">
+      <div class="platform-view-toolbar__title">项目信息管理</div>
+      <div class="platform-view-toolbar__desc">维护委外项目基础信息、招采信息和进场信息</div>
+    </div>
+  </div>
+
+  <!-- PlatformQueryPanel -->
+  <div class="platform-query-panel">
+    <div class="platform-query-panel__grid">
+      <div class="platform-form-item">
+        <div class="platform-form-item__label">所属部门</div>
+        <select class="platform-select">
+          <option value="">全部部门</option>
+          <option>工程一部</option>
+          <option>工程二部</option>
+          <option>工程三部</option>
+          <option>设计院</option>
+          <option>设备管理部</option>
+        </select>
+      </div>
+      <div class="platform-form-item">
+        <div class="platform-form-item__label">项目类型</div>
+        <select class="platform-select">
+          <option value="">全部类型</option>
+          <option>房建工程</option>
+          <option>市政工程</option>
+          <option>装饰装修</option>
+          <option>基础设施</option>
+          <option>特种设备维保</option>
+        </select>
+      </div>
+      <div class="platform-form-item">
+        <div class="platform-form-item__label">项目状态</div>
+        <select class="platform-select">
+          <option value="">全部状态</option>
+          <option value="pending">待启动</option>
+          <option value="processing">进行中</option>
+          <option value="completed">已完成</option>
+          <option value="archived">已归档</option>
+        </select>
+      </div>
+      <div class="platform-form-item">
+        <div class="platform-form-item__label">进场时间</div>
+        <input type="text" class="platform-input" placeholder="开始日期 ~ 结束日期" />
+      </div>
+    </div>
+    <div class="platform-query-panel__footer">
+      <button class="platform-button">重置</button>
+      <button class="platform-button platform-button--primary">查询</button>
+    </div>
+  </div>
+
+  <!-- PlatformSurface（表格容器）-->
+  <section class="platform-surface">
+    <!-- PlatformTableToolbar -->
+    <div class="platform-table-toolbar">
+      <div class="platform-table-toolbar__search-wrap">
+        <div class="platform-table-toolbar__search">
+          <span class="platform-table-toolbar__search-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input type="text" class="platform-table-toolbar__search-input" placeholder="搜索项目名称 / 编号 / 负责人" />
+        </div>
+        <div class="platform-table-toolbar__tools">
+          <button class="platform-table-toolbar__tool-btn" title="刷新">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <button class="platform-table-toolbar__tool-btn" title="列设置">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+          </button>
+          <button class="platform-table-toolbar__tool-btn" title="全屏">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="platform-table-toolbar__actions">
+        <button class="platform-button platform-button--primary" onclick="openModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新建项目
+        </button>
+        <div style="position:relative">
+          <button class="platform-button" onclick="toggleExportMenu()">
+            导出
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left:4px"><path d="M7 10l5 5 5-5"/></svg>
+          </button>
+          <div class="project-export-menu" id="export-menu">
+            <div class="project-export-menu__item" onclick="alert('导出 Excel 功能待实现')">导出 Excel (.xls)</div>
+            <div class="project-export-menu__item" onclick="alert('导出 CSV 功能待实现')">导出 CSV</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PlatformTable -->
+    <div style="overflow-x:auto">
+      <table class="platform-table">
+        <thead>
+          <tr>
+            <th style="width:130px">项目编号</th>
+            <th style="width:260px">项目名称</th>
+            <th style="width:130px">项目类型</th>
+            <th style="width:150px">承包商</th>
+            <th style="width:130px">主管部门经办人</th>
+            <th style="width:100px">含子项目</th>
+            <th style="width:130px">合同金额</th>
+            <th style="width:140px">招采方式</th>
+            <th style="width:110px">状态</th>
+            <th style="width:210px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>WW2026001</td>
+            <td><div class="project-name-cell"><strong>滨河路市政道路改造工程</strong><span>刘海涛</span></div></td>
+            <td>市政工程</td>
+            <td>中铁十二局</td>
+            <td>陈思雅</td>
+            <td>-</td>
+            <td><strong>1,280万</strong></td>
+            <td>公开招标</td>
+            <td><span class="platform-status-tag platform-status-tag--dot platform-status-tag--processing">进行中</span></td>
+            <td>
+              <div class="action-cell">
+                <button class="platform-button platform-button--link platform-button--small">编辑</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">详情</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">归档</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small platform-button--danger">删除</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>WW2026002</td>
+            <td><div class="project-name-cell"><strong>科技产业园精装修项目</strong><span>陈思雅</span></div></td>
+            <td>装饰装修</td>
+            <td>金螳螂装饰</td>
+            <td>王建国</td>
+            <td><span class="ant-tag ant-tag-green">含子项目</span></td>
+            <td><strong>856万</strong></td>
+            <td>竞争性谈判</td>
+            <td><span class="platform-status-tag platform-status-tag--dot platform-status-tag--completed">已完成</span></td>
+            <td>
+              <div class="action-cell">
+                <button class="platform-button platform-button--link platform-button--small">编辑</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">详情</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">归档</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small platform-button--danger">删除</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>WW2026003</td>
+            <td><div class="project-name-cell"><strong>新区综合管廊施工项目</strong><span>赵国强</span></div></td>
+            <td>基础设施</td>
+            <td>中交一公局</td>
+            <td>李志明</td>
+            <td>-</td>
+            <td><strong>2,150万</strong></td>
+            <td>单一来源采购</td>
+            <td><span class="platform-status-tag platform-status-tag--dot platform-status-tag--archived">已归档</span></td>
+            <td>
+              <div class="action-cell">
+                <button class="platform-button platform-button--link platform-button--small">编辑</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">详情</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">归档</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small platform-button--danger">删除</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>WW2026004</td>
+            <td><div class="project-name-cell"><strong>智慧园区弱电系统工程</strong><span>何晓峰</span></div></td>
+            <td>弱电智能化</td>
+            <td>华为技术</td>
+            <td>张红霞</td>
+            <td>-</td>
+            <td><strong>368万</strong></td>
+            <td>竞争性谈判</td>
+            <td><span class="platform-status-tag platform-status-tag--dot platform-status-tag--processing">进行中</span></td>
+            <td>
+              <div class="action-cell">
+                <button class="platform-button platform-button--link platform-button--small">编辑</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">详情</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">归档</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small platform-button--danger">删除</button>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td>WW2026005</td>
+            <td><div class="project-name-cell"><strong>老旧小区改造提升项目</strong><span>王建华</span></div></td>
+            <td>特种设备维保</td>
+            <td>城建集团</td>
+            <td>周建军</td>
+            <td><span class="ant-tag ant-tag-green">含子项目</span></td>
+            <td><strong>1,890万</strong></td>
+            <td>公开招标</td>
+            <td><span class="platform-status-tag platform-status-tag--dot platform-status-tag--pending">待启动</span></td>
+            <td>
+              <div class="action-cell">
+                <button class="platform-button platform-button--link platform-button--small">编辑</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">详情</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small">归档</button>
+                <span class="divider"></span>
+                <button class="platform-button platform-button--link platform-button--small platform-button--danger">删除</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 分页 -->
+    <div class="platform-pagination">
+      <div class="platform-pagination__info">共 128 条</div>
+      <div class="platform-pagination__controls">
+        <button class="platform-pagination__btn" disabled>‹</button>
+        <button class="platform-pagination__btn active">1</button>
+        <button class="platform-pagination__btn">2</button>
+        <button class="platform-pagination__btn">3</button>
+        <button class="platform-pagination__btn">...</button>
+        <button class="platform-pagination__btn">13</button>
+        <button class="platform-pagination__btn">›</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- PlatformModal（新建/编辑项目）-->
+<div class="platform-modal-mask" id="modal-mask">
+  <div class="platform-modal">
+    <div class="platform-modal__header">
+      <div class="platform-modal__title" id="modal-title">新建项目</div>
+      <button class="platform-modal__close" onclick="closeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="platform-modal__body">
+      <!-- PlatformSegmented -->
+      <div class="platform-segmented" id="form-segments">
+        <div class="platform-segmented__item active" data-section="basic">基础信息</div>
+        <div class="platform-segmented__item" data-section="procurement">招采信息</div>
+        <div class="platform-segmented__item" data-section="entry">进场信息</div>
+      </div>
+
+      <!-- 基础信息 -->
+      <section data-form-section="basic">
+        <div class="project-form-grid">
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">项目编码</div>
+            <input type="text" class="platform-input" placeholder="自动生成或手动输入" value="WW2026011" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">项目名称</div>
+            <input type="text" class="platform-input" placeholder="请输入项目名称" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">项目类型</div>
+            <select class="platform-select">
+              <option value="">请选择项目类型</option>
+              <option>房建工程</option>
+              <option>市政工程</option>
+              <option>装饰装修</option>
+              <option>基础设施</option>
+              <option>特种设备维保</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">所属部门</div>
+            <select class="platform-select">
+              <option value="">请选择所属部门</option>
+              <option>工程一部</option>
+              <option>工程二部</option>
+              <option>工程三部</option>
+              <option>设计院</option>
+              <option>设备管理部</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">主管部门经办人</div>
+            <input type="text" class="platform-input" placeholder="请输入经办人姓名" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">业务板块</div>
+            <select class="platform-select">
+              <option value="">请选择业务板块</option>
+              <option>土建施工</option>
+              <option>机电安装</option>
+              <option>装饰装修</option>
+              <option>市政路桥</option>
+              <option>园林绿化</option>
+              <option>设备维保</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">是否含有子项目</div>
+            <select class="platform-select">
+              <option value="false">否</option>
+              <option value="true">是</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">承包商</div>
+            <input type="text" class="platform-input" placeholder="请输入承包商" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">合同金额(万元)</div>
+            <input type="number" class="platform-input" placeholder="请输入合同金额" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">工期(天)</div>
+            <input type="number" class="platform-input" placeholder="请输入工期" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label required">项目负责人</div>
+            <input type="text" class="platform-input" placeholder="请输入项目负责人" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">状态</div>
+            <select class="platform-select">
+              <option value="pending">待启动</option>
+              <option value="processing">进行中</option>
+              <option value="completed">已完成</option>
+              <option value="archived">已归档</option>
+            </select>
+          </div>
+          <div class="platform-form-item project-form-item--full">
+            <div class="platform-form-item__label">项目描述</div>
+            <input type="text" class="platform-input" placeholder="请输入项目描述" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 招采信息 -->
+      <section data-form-section="procurement" style="display:none">
+        <div class="project-form-grid">
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">招采方式</div>
+            <select class="platform-select">
+              <option>公开招标</option>
+              <option>邀请招标</option>
+              <option>竞争性谈判</option>
+              <option>单一来源采购</option>
+              <option>询价采购</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">招标结果</div>
+            <select class="platform-select">
+              <option>待招标</option>
+              <option>中标</option>
+              <option>流标</option>
+              <option>废标</option>
+            </select>
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">公开招标备案号</div>
+            <input type="text" class="platform-input" placeholder="请输入公开招标备案号" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">单一来源备案号</div>
+            <input type="text" class="platform-input" placeholder="请输入单一来源备案号" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">招标代理机构</div>
+            <input type="text" class="platform-input" placeholder="请输入招标代理机构" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">开标日期</div>
+            <input type="date" class="platform-input" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 进场信息 -->
+      <section data-form-section="entry" style="display:none">
+        <div class="project-form-grid">
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">进场时间</div>
+            <input type="date" class="platform-input" />
+          </div>
+          <div class="platform-form-item">
+            <div class="platform-form-item__label">计划退场时间</div>
+            <input type="date" class="platform-input" />
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="platform-form-item">
+            <div class="platform-form-item__label" style="font-weight:600;margin-bottom:12px">人员配置</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end">
+              <input type="text" class="platform-input" placeholder="请输入姓名" />
+              <input type="text" class="platform-input" placeholder="请输入岗位" />
+              <button class="platform-button platform-button--small">+</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="platform-form-item">
+            <div class="platform-form-item__label" style="font-weight:600;margin-bottom:12px">设备清单</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end">
+              <input type="text" class="platform-input" placeholder="请输入设备名" />
+              <input type="text" class="platform-input" placeholder="请输入型号" />
+              <input type="text" class="platform-input" placeholder="请输入数量" />
+              <button class="platform-button platform-button--small">+</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="platform-modal__footer">
+      <button class="platform-button" onclick="closeModal()">取消</button>
+      <button class="platform-button platform-button--primary" onclick="alert('项目已保存'); closeModal();">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 模态框控制
+  function openModal() {
+    document.getElementById('modal-mask').classList.add('show');
+    document.getElementById('modal-title').textContent = '新建项目';
+  }
+  function closeModal() {
+    document.getElementById('modal-mask').classList.remove('show');
+  }
+  document.getElementById('modal-mask').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // Tab 切换
+  document.querySelectorAll('.platform-segmented__item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      document.querySelectorAll('.platform-segmented__item').forEach(function(i) { i.classList.remove('active'); });
+      this.classList.add('active');
+      var section = this.getAttribute('data-section');
+      document.querySelectorAll('[data-form-section]').forEach(function(sec) {
+        sec.style.display = (sec.getAttribute('data-form-section') === section) ? '' : 'none';
+      });
+    });
+  });
+
+  // 导出菜单
+  function toggleExportMenu() {
+    var menu = document.getElementById('export-menu');
+    menu.classList.toggle('show');
+  }
+  document.addEventListener('click', function(e) {
+    var menu = document.getElementById('export-menu');
+    if (!e.target.closest('.platform-table-toolbar__actions') && menu.classList.contains('show')) {
+      menu.classList.remove('show');
+    }
+  });
+
+  // ESC 关闭
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+</body>
+</html>

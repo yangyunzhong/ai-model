@@ -1,0 +1,33 @@
+.ant-tree {
+  color: hsl(var(--foreground));
+  background: transparent;
+  font-size: var(--st-font-size-base);
+  line-height: var(--st-line-height-base);
+}
+
+.ant-tree .ant-tree-treenode {
+  min-height: var(--st-tree-node-height);
+  padding-block: 1px;
+}
+
+.ant-tree .ant-tree-node-content-wrapper {
+  min-height: calc(var(--st-tree-node-height) - 2px);
+  padding: 5px 8px;
+  color: hsl(var(--st-color-text-secondary));
+  line-height: var(--st-line-height-base);
+  border-radius: var(--st-radius-control);
+  transition:
+    color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.ant-tree .ant-tree-node-content-wrapper:hover {
+  color: hsl(var(--primary));
+  background: hsl(var(--st-color-fill-selected));
+}
+
+.ant-tree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  color: hsl(var(--primary));
+  font-weight: 500;
+  background: hsl(var(--st-color-fill-selected));
+}

@@ -1,0 +1,35 @@
+/* antdv-next 组件库的一些样式重置 */
+
+body {
+  /**
+   * 全局启用 抗锯齿字体
+   * @see https://developer.mozilla.org/zh-CN/docs/Web/CSS/font-smooth
+   */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: var(--font-family);
+  font-size: var(--st-font-size-base);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background-deep));
+}
+
+.ant-app {
+  width: 100%;
+  height: 100%;
+  /* 会导致页面无法滚动 */
+  /* overscroll-behavior: none; */
+  color: inherit;
+}
+
+.ant-app,
+.ant-btn:not(.ant-btn-sm):not(.ant-btn-lg),
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select,
+.ant-picker,
+.ant-table,
+.ant-form,
+.ant-pagination {
+  font-family: var(--font-family);
+  font-size: var(--st-font-size-base);
+}

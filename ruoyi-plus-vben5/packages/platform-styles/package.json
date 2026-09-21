@@ -1,0 +1,25 @@
+{
+  "name": "@st/platform-styles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./antd": {
+      "default": "./src/antd/index.css"
+    },
+    "./tokens": {
+      "default": "./src/tokens/index.css"
+    },
+    "./vxe-table": {
+      "default": "./src/vxe-table/index.css"
+    }
+  }
+}

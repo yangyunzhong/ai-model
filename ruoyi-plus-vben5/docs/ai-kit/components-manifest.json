@@ -1,0 +1,483 @@
+{
+  "version": 1,
+  "package": "ruoyi-plus-vben5",
+  "purpose": "AI component registry for choosing existing platform components before generating pages.",
+  "imports": {
+    "platformUi": "@st/platform-ui",
+    "platformStyles": "@st/platform-styles"
+  },
+  "readFirst": [
+    "AGENTS.md",
+    "AI-USAGE.md",
+    "TYPICAL-PAGES.md",
+    "ROUTING.md",
+    "DESIGN.md",
+    "DESIGN-SYSTEM.md",
+    "DEMO-KIT.md"
+  ],
+  "pagePatterns": [
+    {
+      "name": "recipe-filter-table-page",
+      "title": "筛选区 + 表格工具栏 + 表格 + 页码",
+      "typicalPage": "项目全景管理 - 项目总览",
+      "sourcePath": "apps/web-antd/src/views/project/overview/index.vue",
+      "sourceDataPath": "apps/web-antd/src/views/project/overview/project-overview-source.ts",
+      "useWhen": "查询、筛选、列表、分页、导出、新增、编辑、删除",
+      "components": [
+        "PlatformViewToolbar",
+        "PlatformQueryPanel",
+        "PlatformSection",
+        "PlatformTableToolbar",
+        "PlatformTable",
+        "PlatformModal"
+      ],
+      "shellContract": {
+        "filter": "Use PlatformQueryPanel. Replace fields only; do not recreate search rows, action gaps, collapse behavior, or responsive grid.",
+        "tablePanel": "Use one platform-surface or PlatformSection containing PlatformTableToolbar followed by PlatformTable.",
+        "toolbar": "Use PlatformTableToolbar. Do not wrap it in a custom width container or override its horizontal padding.",
+        "pagination": "Let PlatformTable or the confirmed Vben/Vxe table shell own pagination and bottom spacing. Do not add page-level .pagination or .ant-pagination CSS."
+      },
+      "avoidWhen": [
+        "裸写 a-table 后自行补分页、筛选、工具栏",
+        "把查询按钮散落在多个 div 中",
+        "自写 search-row/search-panel/table-toolbar/pagination 页面壳"
+      ],
+      "relatedRules": [
+        "TYPICAL-PAGES.md#recipe-1筛选区--表格工具栏--表格--页码"
+      ]
+    },
+    {
+      "name": "recipe-metric-table-page",
+      "title": "顶部数据指标卡片 + 表格工具栏 + 表格 + 页码",
+      "typicalPage": "智能考勤管理 - 施工管理",
+      "sourcePath": "apps/web-antd/src/views/battery/construction/index.vue",
+      "sourceDataPath": "apps/web-antd/src/views/battery/construction/construction-source.ts",
+      "useWhen": "指标、统计、总数、趋势、审批状态、顶部卡片、流程列表",
+      "components": [
+        "PlatformViewToolbar",
+        "PlatformStatCard",
+        "PlatformQueryPanel",
+        "PlatformTableToolbar",
+        "PlatformTable",
+        "PlatformModal",
+        "PlatformApprovalProgress"
+      ],
+      "shellContract": {
+        "metrics": "Use PlatformStatCard for metric cards. Do not write a page-specific KPI card shell.",
+        "filter": "If filters exist, keep PlatformQueryPanel instead of turning filters into custom rows under the metric area.",
+        "tablePanel": "Use one platform-surface or PlatformSection containing PlatformTableToolbar followed by PlatformTable.",
+        "spacing": "Use --st-layout-section-gap between metrics, filters, and table panel."
+      },
+      "avoidWhen": [
+        "自写指标卡壳",
+        "把指标、查询、表格揉在同一个 card 里",
+        "为了放指标卡而重写筛选区、工具栏或分页间距"
+      ],
+      "relatedRules": [
+        "TYPICAL-PAGES.md#recipe-2顶部数据指标卡片--表格工具栏--表格--页码"
+      ]
+    },
+    {
+      "name": "recipe-tree-table-page",
+      "title": "树结构 + 右侧筛选区/表格工具栏 + 表格 + 页码",
+      "typicalPage": "智能考勤管理 - 文档列表",
+      "sourcePath": "apps/web-antd/src/views/battery/archive/document-list/index.vue",
+      "sourceDataPath": "apps/web-antd/src/views/battery/archive/document-list/document-list-source.ts",
+      "useWhen": "树、组织、分类、目录、区域、左侧导航、右侧列表",
+      "components": [
+        "PlatformTreePanel",
+        "PlatformSectionTitle",
+        "PlatformTableToolbar",
+        "PlatformTable",
+        "PlatformEditForm",
+        "PlatformButton"
+      ],
+      "shellContract": {
+        "tree": "Use PlatformTreePanel for the left tree and search box.",
+        "rightPanel": "Use platform surface and tokens for the right content panel.",
+        "filter": "If the right panel has filters, use PlatformQueryPanel or the Recipe-defined platform search slot.",
+        "tablePanel": "Keep PlatformTableToolbar plus PlatformTable as the table shell; do not rewrite toolbar width or pagination spacing for the split layout."
+      },
+      "avoidWhen": [
+        "自写树面板、搜索框和树容器",
+        "左右区块使用随意 card 嵌套",
+        "右侧重新手写筛选区、工具栏宽度和分页底部间距"
+      ],
+      "relatedRules": [
+        "TYPICAL-PAGES.md#recipe-3树结构--右侧筛选区表格工具栏--表格--页码"
+      ]
+    },
+    {
+      "name": "dashboard-page",
+      "useWhen": "工作台、概览、质量分析、进度看板",
+      "components": [
+        "PlatformViewToolbar",
+        "PlatformStatCard",
+        "PlatformEchartsPanel",
+        "PlatformSection",
+        "PlatformEntryCard",
+        "PlatformNoticeList",
+        "PlatformTaskCard"
+      ],
+      "avoidWhen": [
+        "营销式 hero",
+        "裸放图表容器",
+        "每个指标重新写卡片壳"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md#仪表盘"
+      ]
+    },
+    {
+      "name": "platform-layout-shell",
+      "title": "顶部导航栏 + 左侧导航栏 + 内容区页签",
+      "typicalPage": "web-antd 全局布局",
+      "sourcePath": "packages/effects/layouts/src/basic/layout.vue",
+      "useWhen": "任何正式业务页面默认都处在这套公共布局下",
+      "components": [
+        "VbenAdminLayout",
+        "LayoutMenu",
+        "ContentPageTabs",
+        "PlatformPageTabs"
+      ],
+      "shellContract": {
+        "header": "Top header occupies the full first row, always shows logo and system name, and does not render first-level menus.",
+        "sidebar": "Left sidebar uses platform-rail style, brand green background, collapsed icon plus title, and #0B0C0D 26% hover/active background.",
+        "pageTabs": "Content top area uses ContentPageTabs and PlatformPageTabs to record opened pages with click and close behavior."
+      },
+      "avoidWhen": [
+        "业务页面内自行重写顶部栏、左侧栏或内容区页签",
+        "用传统路径面包屑替代已打开页面页签",
+        "页面 scoped CSS 覆盖菜单 hover、页签关闭按钮或系统标题"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md#平台公共布局三大块",
+        "DEMO-KIT.md"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PlatformViewToolbar",
+      "category": "composite",
+      "layoutRole": "page-header",
+      "sourcePath": "packages/platform-ui/src/view/platform-view-toolbar.vue",
+      "demoPath": "apps/demokit/src/demos/view-toolbar-demo.vue",
+      "useWhen": [
+        "页面标题、说明、右侧主操作"
+      ],
+      "avoidWhen": [
+        "手写页面标题栏",
+        "把主操作按钮散落在页面顶部"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md#平台公共布局三大块"
+      ]
+    },
+    {
+      "name": "PlatformQueryPanel",
+      "category": "form",
+      "layoutRole": "filter-panel",
+      "sourcePath": "packages/platform-ui/src/form/platform-query-panel.vue",
+      "demoPath": "apps/demokit/src/demos/form-demo.vue",
+      "useWhen": [
+        "复杂查询条件区",
+        "查询条件需要折叠"
+      ],
+      "avoidWhen": [
+        "裸写 a-form 并手动调按钮间距"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md",
+        "DESIGN-SYSTEM.md"
+      ]
+    },
+    {
+      "name": "PlatformTable",
+      "category": "data-display",
+      "layoutRole": "table",
+      "sourcePath": "packages/platform-ui/src/table/platform-table.vue",
+      "demoPath": "apps/demokit/src/demos/table-demo.vue",
+      "useWhen": [
+        "中小型数据表格",
+        "需要平台表头筛选、列设置、分页"
+      ],
+      "avoidWhen": [
+        "真实业务页已深度使用 useVbenVxeGrid 且未确认替换",
+        "大数据量虚拟滚动场景"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformTableToolbar",
+      "category": "data-display",
+      "layoutRole": "table-toolbar",
+      "sourcePath": "packages/platform-ui/src/table/platform-table-toolbar.vue",
+      "demoPath": "apps/demokit/src/demos/table-demo.vue",
+      "useWhen": [
+        "表格顶部新增、删除、刷新、设置、全屏"
+      ],
+      "avoidWhen": [
+        "把工具按钮拆到多个容器"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformSectionTitle",
+      "category": "composite",
+      "layoutRole": "section-title",
+      "sourcePath": "packages/platform-ui/src/view/platform-section-title.vue",
+      "demoPath": "apps/demokit/src/demos/title-demo.vue",
+      "useWhen": [
+        "模块标题",
+        "标题右侧贴小动作",
+        "标题中部放分段或视图切换"
+      ],
+      "avoidWhen": [
+        "页面里手写标题壳",
+        "用绝对定位硬摆标题中部控件"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformSection",
+      "category": "layout",
+      "layoutRole": "content-section",
+      "sourcePath": "packages/platform-ui/src/view/platform-section.vue",
+      "demoPath": "apps/demokit/src/demos/view-layout-demo.vue",
+      "useWhen": [
+        "详情区块",
+        "配置区块",
+        "表格或图表外层容器"
+      ],
+      "avoidWhen": [
+        "每个页面自写 card surface"
+      ],
+      "relatedRules": [
+        "DESIGN-SYSTEM.md"
+      ]
+    },
+    {
+      "name": "PlatformEntryCard",
+      "category": "data-display",
+      "layoutRole": "entry-card",
+      "sourcePath": "packages/platform-ui/src/entry/platform-entry-card.vue",
+      "demoPath": "apps/demokit/src/demos/entry-card-demo.vue",
+      "useWhen": [
+        "快捷入口",
+        "应用入口",
+        "工作台或概览页的功能导航卡片"
+      ],
+      "avoidWhen": [
+        "只有纯文本标签按钮",
+        "结构和视觉完全不同的营销卡片"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformStatCard",
+      "category": "data-display",
+      "layoutRole": "metric-card",
+      "sourcePath": "packages/platform-ui/src/stat/platform-stat-card.vue",
+      "demoPath": "apps/demokit/src/demos/stat-card-demo.vue",
+      "useWhen": [
+        "KPI",
+        "摘要指标",
+        "趋势指标"
+      ],
+      "avoidWhen": [
+        "页面自写指标卡壳和图标尺寸"
+      ],
+      "relatedRules": [
+        "DESIGN-SYSTEM.md"
+      ]
+    },
+    {
+      "name": "PlatformModal",
+      "category": "feedback",
+      "layoutRole": "dialog",
+      "sourcePath": "packages/platform-ui/src/modal/platform-modal.vue",
+      "demoPath": "apps/demokit/src/demos/overlay-demo.vue",
+      "useWhen": [
+        "新增、编辑、详情弹窗"
+      ],
+      "avoidWhen": [
+        "裸写 a-modal 并手动调 footer 间距"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformDrawer",
+      "category": "feedback",
+      "layoutRole": "drawer",
+      "sourcePath": "packages/platform-ui/src/drawer/platform-drawer.vue",
+      "demoPath": "apps/demokit/src/demos/overlay-demo.vue",
+      "useWhen": [
+        "详情抽屉",
+        "右侧复杂配置"
+      ],
+      "avoidWhen": [
+        "裸写 a-drawer 并复制页面字段布局"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformEditForm",
+      "category": "form",
+      "layoutRole": "edit-form",
+      "sourcePath": "packages/platform-ui/src/form/platform-edit-form.vue",
+      "demoPath": "apps/demokit/src/demos/form-demo.vue",
+      "useWhen": [
+        "新增编辑表单",
+        "弹窗内维护表单"
+      ],
+      "avoidWhen": [
+        "业务页自写整套表单密度"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformPageTabs",
+      "category": "navigation",
+      "layoutRole": "page-tabs",
+      "sourcePath": "packages/platform-ui/src/view/platform-page-tabs.vue",
+      "demoPath": "apps/demokit/src/demos/view-layout-demo.vue",
+      "useWhen": [
+        "内容区顶部记录已打开页面",
+        "需要点击切换和关闭访问页面",
+        "替代传统路径面包屑"
+      ],
+      "avoidWhen": [
+        "仅展示静态层级路径",
+        "页面没有多页面访问记录需求"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformSectionAction",
+      "category": "composite",
+      "layoutRole": "section-action",
+      "sourcePath": "packages/platform-ui/src/view/platform-section-action.vue",
+      "demoPath": "",
+      "useWhen": [
+        "模块标题右侧的刷新、更多、查看更多等文本加图标动作",
+        "需要统一模块级 hover 色和箭头方向"
+      ],
+      "avoidWhen": [
+        "主按钮或危险按钮",
+        "需要下拉菜单的复合操作"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformNoticeList",
+      "category": "data-display",
+      "layoutRole": "notice-list",
+      "sourcePath": "packages/platform-ui/src/notice/platform-notice-list.vue",
+      "demoPath": "apps/demokit/src/demos/notice-list-demo.vue",
+      "useWhen": [
+        "消息中心",
+        "待办提醒",
+        "工作台通知列表"
+      ],
+      "avoidWhen": [
+        "页面已经有稳定复用的复杂卡片形态",
+        "每页重新手写消息列表壳和两行内容布局"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformDescriptions",
+      "category": "data-display",
+      "layoutRole": "descriptions",
+      "sourcePath": "packages/platform-ui/src/view/platform-descriptions.vue",
+      "demoPath": "apps/demokit/src/demos/view-layout-demo.vue",
+      "useWhen": [
+        "详情页基础字段",
+        "对象摘要信息"
+      ],
+      "avoidWhen": [
+        "手写 label/value 网格"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformFileList",
+      "category": "data-display",
+      "layoutRole": "file-list",
+      "sourcePath": "packages/platform-ui/src/file/platform-file-list.vue",
+      "demoPath": "apps/demokit/src/demos/file-demo.vue",
+      "useWhen": [
+        "附件列表",
+        "资料台账"
+      ],
+      "avoidWhen": [
+        "每页自写文件图标、大小、状态排版"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    },
+    {
+      "name": "PlatformEchartsPanel",
+      "category": "chart",
+      "layoutRole": "chart-panel",
+      "sourcePath": "packages/platform-ui/src/chart/platform-echarts-panel.vue",
+      "demoPath": "apps/demokit/src/demos/chart-demo.vue",
+      "useWhen": [
+        "图表区",
+        "仪表盘模块"
+      ],
+      "avoidWhen": [
+        "裸放 ECharts DOM"
+      ],
+      "relatedRules": [
+        "AI-USAGE.md"
+      ]
+    }
+  ],
+  "tokens": {
+    "sourcePath": "packages/platform-styles/src/tokens/index.css",
+    "spacing": [
+      "--st-layout-section-gap",
+      "--st-module-content-padding",
+      "--st-search-form-action-gap",
+      "--st-table-edge-cell-padding"
+    ],
+    "radius": [
+      "--st-radius-control",
+      "--st-radius-card"
+    ],
+    "shadow": [
+      "--st-shadow-card",
+      "--st-shadow-stat-card"
+    ]
+  },
+  "qualityGates": [
+    "pnpm run check:ai-kit",
+    "pnpm -F @st/demokit run typecheck",
+    "pnpm -F @st/demokit run build"
+  ]
+}

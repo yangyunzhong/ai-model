@@ -1,0 +1,23 @@
+# Keep shared project skills versioned, but avoid accidentally committing local agent state.
+/.agents/*
+!/.agents/skills/
+!/.agents/skills/**
+
+# Common local runtime outputs
+*.log
+*.tmp
+*.temp
+/.pnpm-store/
+
+/.idea/
+/docs/training/
+
+# Local sandbox / build caches (must never be committed)
+/.m2home/
+/.m2repo/
+/.m2tmp/
+/target/
+**/target/
+.DS_Store
+hs_err_pid*.log
+replay_pid*.log
