@@ -760,3 +760,468 @@ export function removeCategory(id: number) {
 export function countModelsByCategory(categoryId: number) {
   return models.value.filter((item) => item.categoryId === categoryId).length;
 }
+
+// ==================== 异物检测分析 ====================
+export type AnomalyMonitorStatus = '关注' | '异常' | '正常';
+
+export interface AnomalyFilter {
+  device: string;
+  line: string;
+  station: string;
+  type: '' | DeviceTypeOption;
+}
+
+export interface AnomalyEventRecord {
+  abnormalValue: string;
+  deviation: string;
+  deviceId: string;
+  deviceName: string;
+  id: string;
+  line: string;
+  normalValue: string;
+  param: string;
+  station: string;
+  time: string;
+  timestamp: number;
+}
+
+export interface AnomalyMonitorParam {
+  name: string;
+  range: string;
+  status: AnomalyMonitorStatus;
+  value: string;
+}
+
+export interface AnomalyTrendPoint {
+  current: number;
+  time: string;
+  voltage: number;
+}
+
+export interface AnomalyAnalysisResult {
+  anomalyIndex: number;
+  anomalyPercent: number;
+  chartLabel: string;
+  events: AnomalyEventRecord[];
+  monitorParams: AnomalyMonitorParam[];
+  seedKey: string;
+  trend: AnomalyTrendPoint[];
+}
+
+/** 异物检测仅覆盖自动扶梯 / 垂直电梯两类设备品种 */
+export const anomalyDeviceTypeOptions: { label: string; value: DeviceTypeOption }[] = [
+  { label: '自动扶梯', value: '自动扶梯' },
+  { label: '垂直电梯', value: '垂直电梯' },
+];
+
+export const anomalyTrendPointCount = 30;
+
+function hashString(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return Math.abs(hash);
+}
+
+function pseudoRandom(seed: number, index: number) {
+  const value = Math.sin((seed + index + 1) * 12.9898) * 43758.5453;
+
+  return value - Math.floor(value);
+}
+
+function formatClockTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function getAnomalyLineOptions() {
+  return [...new Set(devices.value.map((item) => item.line))].map((line) => ({
+    label: line,
+    value: line,
+  }));
+}
+
+export function getAnomalyStationOptions(line: string) {
+  const scoped = line
+    ? devices.value.filter((item) => item.line === line)
+    : devices.value;
+
+  return [...new Set(scoped.map((item) => item.station))].map((station) => ({
+    label: station,
+    value: station,
+  }));
+}
+
+function getAnomalyScopedDevices(
+  filter: Pick<AnomalyFilter, 'line' | 'station' | 'type'>,
+) {
+  return devices.value.filter((item) => {
+    if (item.type !== '自动扶梯' && item.type !== '垂直电梯') {
+      return false;
+    }
+    if (filter.line && item.line !== filter.line) {
+      return false;
+    }
+    if (filter.station && item.station !== filter.station) {
+      return false;
+    }
+    if (filter.type && item.type !== filter.type) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function getAnomalyDeviceOptions(
+  filter: Pick<AnomalyFilter, 'line' | 'station' | 'type'>,
+) {
+  return getAnomalyScopedDevices(filter).map((item) => ({
+    label: `${item.name}（${item.id}）`,
+    value: item.id,
+  }));
+}
+
+export function getAnomalyAnalysis(
+  filter: AnomalyFilter,
+  tick = 0,
+): AnomalyAnalysisResult {
+  const targetDevice = filter.device
+    ? devices.value.find((item) => item.id === filter.device)
+    : undefined;
+  const seedKey = targetDevice
+    ? targetDevice.name
+    : filter.station || filter.line || '全部线路';
+  const baseSeed = hashString(seedKey);
+  const baseRandom = (index: number) => pseudoRandom(baseSeed, index);
+  const liveRandom = (index: number) =>
+    pseudoRandom(baseSeed + tick * 104_729, index);
+
+  const scopedDevices = getAnomalyScopedDevices(filter);
+  const eventDevices = targetDevice ? [targetDevice] : scopedDevices;
+  const chartLabel = targetDevice
+    ? targetDevice.name
+    : `${filter.station || filter.line || '全部线路'}全部设备`;
+
+  const baseCurrent = 30 + baseRandom(1) * 15;
+  const baseVibration = 1.5 + baseRandom(2) * 2.5;
+  const baseTemp = 50 + baseRandom(3) * 35;
+  const abnormalCurrent = baseCurrent * (1.02 + baseRandom(4) * 0.22);
+  const abnormalVibration = baseVibration * (1.03 + baseRandom(5) * 0.28);
+  const currentPercent = Math.round((abnormalCurrent / baseCurrent - 1) * 100);
+  const vibrationPercent = Math.round(
+    (abnormalVibration / baseVibration - 1) * 100,
+  );
+  const tempRise = Math.round(3 + baseRandom(7) * 10);
+
+  const paramSnapshots = [
+    {
+      abnormal: `${abnormalCurrent.toFixed(1)}A`,
+      deviation: `+${currentPercent}%`,
+      normal: `${baseCurrent.toFixed(1)}A`,
+      param: '电流',
+    },
+    {
+      abnormal: `${abnormalVibration.toFixed(1)}mm/s`,
+      deviation: `+${vibrationPercent}%`,
+      normal: `${baseVibration.toFixed(1)}mm/s`,
+      param: '振动',
+    },
+    {
+      abnormal: `${abnormalCurrent.toFixed(1)}A/${abnormalVibration.toFixed(1)}`,
+      deviation: `+${Math.round((currentPercent + vibrationPercent) / 2)}%`,
+      normal: `${baseCurrent.toFixed(1)}A/${baseVibration.toFixed(1)}`,
+      param: '电流+振动',
+    },
+    {
+      abnormal: `${(baseTemp + tempRise).toFixed(0)}°C`,
+      deviation: `+${tempRise}°C`,
+      normal: `${baseTemp.toFixed(0)}°C`,
+      param: '温度',
+    },
+  ];
+
+  const now = Date.now();
+  const nowHour = new Date(now).getHours();
+  const isPeak =
+    (nowHour >= 7 && nowHour <= 9) || (nowHour >= 17 && nowHour <= 19);
+  const deviceCount = eventDevices.length || 1;
+  const eventCap = filter.line ? (isPeak ? 5 : 3) : isPeak ? 8 : 5;
+  const eventTotal = Math.max(
+    isPeak ? 2 : 1,
+    Math.min(
+      eventCap,
+      Math.floor(
+        deviceCount * (isPeak ? 0.5 : 0.3) +
+          liveRandom(8) * (isPeak ? 1.5 : 0.8) +
+          (isPeak ? 1 : 0),
+      ),
+    ),
+  );
+
+  const rawEvents: AnomalyEventRecord[] = [];
+
+  for (let index = 0; index < eventTotal; index += 1) {
+    const device = eventDevices[index % eventDevices.length];
+    const snapshot = paramSnapshots[index % paramSnapshots.length];
+
+    if (!device || !snapshot) {
+      continue;
+    }
+
+    const minutesAgo = 1 + Math.floor(liveRandom(20 + index) * 120);
+    const timestamp = now - minutesAgo * 60_000;
+
+    rawEvents.push({
+      abnormalValue: snapshot.abnormal,
+      deviation: snapshot.deviation,
+      deviceId: device.id,
+      deviceName: device.name,
+      id: `${device.id}-${timestamp}`,
+      line: device.line,
+      normalValue: snapshot.normal,
+      param: snapshot.param,
+      station: device.station,
+      time: formatDateTime(new Date(timestamp)),
+      timestamp,
+    });
+  }
+
+  rawEvents.sort((a, b) => b.timestamp - a.timestamp);
+
+  const countPerDevice: Record<string, number> = {};
+  const events = rawEvents.filter((item) => {
+    const count = countPerDevice[item.deviceId] ?? 0;
+
+    if (count >= 10) {
+      return false;
+    }
+    countPerDevice[item.deviceId] = count + 1;
+
+    return true;
+  });
+
+  const anomalyIndex = 9 + Math.floor(baseRandom(19) * 12);
+  const anomalyPercent = Math.round(20 + baseRandom(20) * 50);
+
+  // 实时监测值：tick 变化时轻微抖动，用于页面 30 秒自动刷新
+  const liveCurrent = 30 + liveRandom(101) * 15;
+  const liveVibration = 1.5 + liveRandom(102) * 2.5;
+  const liveTemp = 50 + liveRandom(103) * 35;
+
+  const trend: AnomalyTrendPoint[] = Array.from(
+    { length: anomalyTrendPointCount },
+    (_, index) => {
+      const distance = Math.abs(index - anomalyIndex);
+      const weight = distance <= 2 ? 1 - distance / 3 : 0;
+      const currentSpike = weight * (anomalyPercent / 100);
+      const voltageSpike = weight * (anomalyPercent / 400);
+
+      return {
+        current: Number(
+          (
+            baseCurrent *
+            (1 + (liveRandom(31 + index) - 0.5) * 0.05 + currentSpike)
+          ).toFixed(1),
+        ),
+        time: formatClockTime(new Date(now - (29 - index) * 60_000)),
+        voltage: Number(
+          (
+            380 *
+            (1 + (liveRandom(61 + index) - 0.5) * 0.01 + voltageSpike)
+          ).toFixed(1),
+        ),
+      };
+    },
+  );
+
+  const deviceType = filter.type || scopedDevices[0]?.type || '自动扶梯';
+  const monitorParams: AnomalyMonitorParam[] =
+    deviceType === '垂直电梯'
+      ? [
+          {
+            name: '电流',
+            range: '22-35A',
+            status: '正常',
+            value: `${(liveCurrent * 0.85).toFixed(1)}A`,
+          },
+          { name: '电压', range: '370-390V', status: '正常', value: '380V' },
+          {
+            name: '振动',
+            range: '0-2.5mm/s',
+            status: '正常',
+            value: `${liveVibration.toFixed(1)}mm/s`,
+          },
+          {
+            name: '温度',
+            range: '35-75°C',
+            status: '正常',
+            value: `${liveTemp.toFixed(0)}°C`,
+          },
+        ]
+      : [
+          {
+            name: '电流',
+            range: '30-42A',
+            status: '正常',
+            value: `${liveCurrent.toFixed(1)}A`,
+          },
+          { name: '电压', range: '370-390V', status: '正常', value: '380V' },
+          {
+            name: '振动',
+            range: '0-3.0mm/s',
+            status: '正常',
+            value: `${liveVibration.toFixed(1)}mm/s`,
+          },
+          {
+            name: '温度',
+            range: '40-80°C',
+            status: '正常',
+            value: `${liveTemp.toFixed(0)}°C`,
+          },
+        ];
+
+  if (currentPercent >= 20) {
+    const currentParam = monitorParams.find((item) => item.name === '电流');
+
+    if (currentParam) {
+      currentParam.status = '关注';
+    }
+  }
+  if (vibrationPercent >= 25) {
+    const vibrationParam = monitorParams.find((item) => item.name === '振动');
+
+    if (vibrationParam) {
+      vibrationParam.status = '关注';
+    }
+  }
+  if (abnormalCurrent > 42 && abnormalVibration > 3) {
+    const currentParam = monitorParams.find((item) => item.name === '电流');
+    const vibrationParam = monitorParams.find((item) => item.name === '振动');
+
+    if (currentParam) {
+      currentParam.status = '异常';
+    }
+    if (vibrationParam) {
+      vibrationParam.status = '异常';
+    }
+  }
+
+  return {
+    anomalyIndex,
+    anomalyPercent,
+    chartLabel,
+    events,
+    monitorParams,
+    seedKey,
+    trend,
+  };
+}
+
+export const anomalyStatusMeta: Record<
+  AnomalyMonitorStatus,
+  { label: AnomalyMonitorStatus; status: 'error' | 'success' | 'warning' }
+> = {
+  关注: { label: '关注', status: 'warning' },
+  异常: { label: '异常', status: 'error' },
+  正常: { label: '正常', status: 'success' },
+};
+
+/** 「全部记录」弹窗使用的历史异常记录（近 7 天） */
+export function getAnomalyAllEvents(
+  filter: AnomalyFilter,
+  limit = 90,
+): AnomalyEventRecord[] {
+  const targetDevice = filter.device
+    ? devices.value.find((item) => item.id === filter.device)
+    : undefined;
+  const eventDevices = targetDevice
+    ? [targetDevice]
+    : getAnomalyScopedDevices(filter);
+
+  if (eventDevices.length === 0) {
+    return [];
+  }
+
+  const seedKey = targetDevice
+    ? targetDevice.name
+    : filter.station || filter.line || '全部线路';
+  const seed = hashString(seedKey);
+  const baseCurrent = 30 + pseudoRandom(seed, 1) * 15;
+  const baseVibration = 1.5 + pseudoRandom(seed, 2) * 2.5;
+  const baseTemp = 50 + pseudoRandom(seed, 3) * 35;
+  const now = Date.now();
+  const records: AnomalyEventRecord[] = [];
+
+  for (let index = 0; index < limit; index += 1) {
+    const device = eventDevices[index % eventDevices.length];
+
+    if (!device) {
+      continue;
+    }
+
+    const currentRise = 1.02 + pseudoRandom(seed + 37, index) * 0.22;
+    const vibrationRise = 1.03 + pseudoRandom(seed + 53, index) * 0.28;
+    const tempRise = 3 + pseudoRandom(seed + 71, index) * 10;
+    const abnormalCurrent = baseCurrent * currentRise;
+    const abnormalVibration = baseVibration * vibrationRise;
+    const paramType = index % 4;
+
+    let snapshot: { abnormal: string; deviation: string; normal: string; param: string };
+
+    if (paramType === 0) {
+      snapshot = {
+        abnormal: `${abnormalCurrent.toFixed(1)}A`,
+        deviation: `+${Math.round((currentRise - 1) * 100)}%`,
+        normal: `${baseCurrent.toFixed(1)}A`,
+        param: '电流',
+      };
+    } else if (paramType === 1) {
+      snapshot = {
+        abnormal: `${abnormalVibration.toFixed(1)}mm/s`,
+        deviation: `+${Math.round((vibrationRise - 1) * 100)}%`,
+        normal: `${baseVibration.toFixed(1)}mm/s`,
+        param: '振动',
+      };
+    } else if (paramType === 2) {
+      snapshot = {
+        abnormal: `${abnormalCurrent.toFixed(1)}A/${abnormalVibration.toFixed(1)}`,
+        deviation: `+${Math.round((currentRise + vibrationRise - 2) * 50)}%`,
+        normal: `${baseCurrent.toFixed(1)}A/${baseVibration.toFixed(1)}`,
+        param: '电流+振动',
+      };
+    } else {
+      snapshot = {
+        abnormal: `${(baseTemp + tempRise).toFixed(0)}°C`,
+        deviation: `+${Math.round(tempRise)}°C`,
+        normal: `${baseTemp.toFixed(0)}°C`,
+        param: '温度',
+      };
+    }
+
+    const minutesAgo =
+      5 + Math.floor(pseudoRandom(seed + 89, index) * 7 * 24 * 60);
+    const timestamp = now - minutesAgo * 60_000;
+
+    records.push({
+      abnormalValue: snapshot.abnormal,
+      deviation: snapshot.deviation,
+      deviceId: device.id,
+      deviceName: device.name,
+      id: `${device.id}-all-${timestamp}`,
+      line: device.line,
+      normalValue: snapshot.normal,
+      param: snapshot.param,
+      station: device.station,
+      time: formatDateTime(new Date(timestamp)),
+      timestamp,
+    });
+  }
+
+  return records.sort((a, b) => b.timestamp - a.timestamp);
+}

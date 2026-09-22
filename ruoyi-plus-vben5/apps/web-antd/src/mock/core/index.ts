@@ -174,6 +174,24 @@ const mockBackendMenuList = [
     name: 'ModelCategoryMenu',
     path: '/model-category',
   },
+  // ====== 一级：异物检测分析 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'model/anomaly/index',
+        hidden: false,
+        meta: { icon: 'lucide:scan-search', noCache: false, title: '异物检测监测' },
+        name: 'AnomalyDetectionMonitor',
+        path: '/anomaly-detection/monitor',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:radar', noCache: false, order: 12, title: '异物检测分析' },
+    name: 'AnomalyDetectionMenu',
+    path: '/anomaly-detection',
+  },
 ] satisfies Menu[];
 
 function getMockBackendMenuList() {
