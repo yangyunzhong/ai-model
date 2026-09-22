@@ -222,7 +222,7 @@ const detailExecRecords = computed(() =>
         />
       </section>
 
-      <PlatformQueryPanel :columns="4">
+      <PlatformQueryPanel :columns="4" :show-query="false" @reset="handleReset">
         <PlatformSelect
           v-model:value="filter.categoryId"
           :options="categoryOptions"
@@ -246,9 +246,6 @@ const detailExecRecords = computed(() =>
           allow-clear
           placeholder="搜索模型名称"
         />
-        <template #actions>
-          <PlatformButton scene="toolbar" @click="handleReset">重置</PlatformButton>
-        </template>
       </PlatformQueryPanel>
 
       <section class="model-overview-card-grid">

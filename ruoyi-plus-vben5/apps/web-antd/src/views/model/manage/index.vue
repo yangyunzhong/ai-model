@@ -478,7 +478,7 @@ onMounted(() => {
         title="模型管理"
       />
 
-      <PlatformQueryPanel :columns="4">
+      <PlatformQueryPanel :columns="4" :show-query="false" @reset="handleReset">
         <PlatformSelect
           v-model:value="query.categoryId"
           :options="categoryOptions"
@@ -496,9 +496,6 @@ onMounted(() => {
           allow-clear
           placeholder="搜索模型名称"
         />
-        <template #actions>
-          <PlatformButton scene="toolbar" @click="handleReset">重置</PlatformButton>
-        </template>
       </PlatformQueryPanel>
 
       <section class="platform-surface model-manage-surface">
