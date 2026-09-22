@@ -362,6 +362,96 @@ const mockBackendMenuList = [
     name: 'TrainingCertMenu',
     path: '/training-cert',
   },
+  // ====== 一级：模型概览 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'platform/blank/index',
+        hidden: false,
+        meta: { icon: 'lucide:gauge', noCache: false, title: '总览看板' },
+        name: 'ModelOverviewDashboard',
+        path: '/model-overview/dashboard',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:chart-pie', noCache: false, order: 7, title: '模型概览' },
+    name: 'ModelOverviewMenu',
+    path: '/model-overview',
+  },
+  // ====== 一级：模型管理 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'platform/blank/index',
+        hidden: false,
+        meta: { icon: 'lucide:list', noCache: false, title: '模型列表' },
+        name: 'ModelList',
+        path: '/model-manage/list',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:boxes', noCache: false, order: 8, title: '模型管理' },
+    name: 'ModelManageMenu',
+    path: '/model-manage',
+  },
+  // ====== 一级：数据比对 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'platform/blank/index',
+        hidden: false,
+        meta: { icon: 'lucide:git-compare', noCache: false, title: '比对任务' },
+        name: 'DataComparisonTask',
+        path: '/model-comparison/task',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:git-compare-arrows', noCache: false, order: 9, title: '数据比对' },
+    name: 'DataComparisonMenu',
+    path: '/model-comparison',
+  },
+  // ====== 一级：模型任务 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'platform/blank/index',
+        hidden: false,
+        meta: { icon: 'lucide:clipboard-list', noCache: false, title: '任务列表' },
+        name: 'ModelTaskList',
+        path: '/model-task/list',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:list-checks', noCache: false, order: 10, title: '模型任务' },
+    name: 'ModelTaskMenu',
+    path: '/model-task',
+  },
+  // ====== 一级：模型类别 ======
+  {
+    children: [
+      {
+        children: [],
+        component: 'platform/blank/index',
+        hidden: false,
+        meta: { icon: 'lucide:tags', noCache: false, title: '类别管理' },
+        name: 'ModelCategoryManage',
+        path: '/model-category/manage',
+      },
+    ],
+    component: 'Layout',
+    hidden: false,
+    meta: { icon: 'lucide:folder-tree', noCache: false, order: 11, title: '模型类别' },
+    name: 'ModelCategoryMenu',
+    path: '/model-category',
+  },
 ] satisfies Menu[];
 
 function getMockBackendMenuList() {
