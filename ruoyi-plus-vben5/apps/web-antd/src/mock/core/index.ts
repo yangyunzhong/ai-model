@@ -367,7 +367,7 @@ const mockBackendMenuList = [
     children: [
       {
         children: [],
-        component: 'platform/blank/index',
+        component: 'model/overview/index',
         hidden: false,
         meta: { icon: 'lucide:gauge', noCache: false, title: '总览看板' },
         name: 'ModelOverviewDashboard',
@@ -385,7 +385,7 @@ const mockBackendMenuList = [
     children: [
       {
         children: [],
-        component: 'platform/blank/index',
+        component: 'model/manage/index',
         hidden: false,
         meta: { icon: 'lucide:list', noCache: false, title: '模型列表' },
         name: 'ModelList',
@@ -403,7 +403,7 @@ const mockBackendMenuList = [
     children: [
       {
         children: [],
-        component: 'platform/blank/index',
+        component: 'model/compare/index',
         hidden: false,
         meta: { icon: 'lucide:git-compare', noCache: false, title: '比对任务' },
         name: 'DataComparisonTask',
@@ -421,7 +421,7 @@ const mockBackendMenuList = [
     children: [
       {
         children: [],
-        component: 'platform/blank/index',
+        component: 'model/task/index',
         hidden: false,
         meta: { icon: 'lucide:clipboard-list', noCache: false, title: '任务列表' },
         name: 'ModelTaskList',
@@ -439,7 +439,7 @@ const mockBackendMenuList = [
     children: [
       {
         children: [],
-        component: 'platform/blank/index',
+        component: 'model/category/index',
         hidden: false,
         meta: { icon: 'lucide:tags', noCache: false, title: '类别管理' },
         name: 'ModelCategoryManage',
