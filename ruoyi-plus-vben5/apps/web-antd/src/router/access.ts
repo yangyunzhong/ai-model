@@ -41,11 +41,6 @@ const routeMetaMapping: Record<string, Omit<RouteMeta, 'title'>> = {
     activePath: '/demo/leave',
     requireHomeRedirect: true,
   },
-
-  '/personnel/overview/detail': {
-    activePath: '/personnel/overview',
-    requireHomeRedirect: true,
-  },
 };
 
 /**
