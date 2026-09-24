@@ -55,6 +55,30 @@ function backMenuToVbenMenu(
 ): RouteRecordStringComponent[] {
   const resultList: RouteRecordStringComponent[] = [];
   menuList.forEach((menu) => {
+    const onlyChild = menu.children?.length === 1 ? menu.children[0] : undefined;
+
+    // 一级菜单下只有一个子菜单时，扁平化为一级菜单，点击一级菜单直接打开页面
+    // 避免侧边栏出现只有一项的二级菜单（如 模型概览 -> 总览看板）
+    if (
+      parentPath === '' &&
+      menu.path !== '/' &&
+      menu.component === 'Layout' &&
+      onlyChild &&
+      onlyChild.children.length === 0
+    ) {
+      // 路径沿用子菜单，保证已有页面链接不受影响
+      menu.path = onlyChild.path;
+      // 标题与图标沿用一级菜单自身配置
+      onlyChild.meta = {
+        ...onlyChild.meta,
+        icon: menu.meta.icon,
+        title: menu.meta.title,
+      };
+      // 复用根目录菜单处理：使用BasicLayout并隐藏子菜单
+      menu.component = 'RootMenu';
+      onlyChild.path = '';
+    }
+
     // 根目录为菜单形式
     // 固定有一个children  children为当前菜单
     if (menu.path === '/' && menu.children && menu.children.length === 1) {
