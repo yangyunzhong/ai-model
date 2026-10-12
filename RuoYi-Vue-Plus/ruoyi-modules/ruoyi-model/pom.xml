@@ -84,6 +84,30 @@
             <artifactId>ruoyi-common-sse</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-core</artifactId>
+            <version>3.4.1</version>
+        </dependency>
+        <!--
+            使用 zerodep 传输：内部以 shaded 方式捆绑 httpclient5 5.0.3。
+            Spring Boot BOM 会把 httpclient5 覆盖到 5.5.2，而 5.5.2 的
+            DefaultHttpClientConnectionOperator 改用 DetachedSocketFactory 建 socket，
+            不再调用 docker-java 注册的 npipe ConnectionSocketFactory，
+            导致 Windows npipe 探测退化为 TCP localhost:2375 连接失败。
+            zerodep 内置旧版 httpclient5，可正常支持 npipe。
+        -->
+        <dependency>
+            <groupId>com.github.docker-java</groupId>
+            <artifactId>docker-java-transport-zerodep</artifactId>
+            <version>3.4.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.dromara</groupId>
+            <artifactId>ruoyi-common-job</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
     </dependencies>
 
 </project>

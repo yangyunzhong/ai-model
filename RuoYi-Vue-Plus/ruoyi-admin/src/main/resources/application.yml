@@ -263,3 +263,29 @@ warm-flow:
   node-tooltip: true
   # 默认Authorization，如果有多个token，用逗号分隔
   token-name: ${sa-token.token-name},clientid
+
+model:
+  runtime:
+    enabled: true
+    docker-host: "npipe:////./pipe/dockerDesktopLinuxEngine"
+    image: "model-python-runtime:1.0"
+    # 注意：Windows 下必须使用反斜杠。docker-java 的 Bind.parse 以「: (后面非反斜杠)」切分，
+    # 正斜杠形式 D:/... 的盘符冒号会被误判为分隔符，导致 inspect 容器时解析 Bind 失败。
+    script-dir: "D:\\AAA_WorkProject\\ai-model\\runtime-scripts"
+    container-script-dir: "/app/scripts"
+    runner-path: "/app/runner.py"
+    memory-mb: 1024
+    cpus: 1.0
+    pids-limit: 128
+    exec-timeout-seconds: 60
+    install-timeout-seconds: 600
+    network: "host"
+    max-concurrent-exec: 4
+    connect-timeout-seconds: 30
+    response-timeout-seconds: 300
+    # 容器内脚本访问平台数据库（只读账号），Docker Desktop 下容器经 host.docker.internal 访问宿主机 MySQL
+    db-host: "host.docker.internal"
+    db-port: 3306
+    db-name: "ai-model"
+    db-user: "model_reader"
+    db-password: "model_reader_2026"

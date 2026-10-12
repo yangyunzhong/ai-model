@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import type { ModelRecord } from '../data';
 
-import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
 import {
   PlatformButton,
-  PlatformDescriptions,
-  PlatformDrawer,
   PlatformInput,
   PlatformQueryPanel,
   PlatformSelect,
@@ -22,12 +20,14 @@ import {
   categories,
   execRecords,
   execStatusMeta,
-  getModelParams,
+  getCategoryDeviceType,
   getModelResultRows,
   modelStatusMeta,
   models,
   registerTypeOptions,
 } from '../data';
+
+import ModelDetailDrawer from './modal/model-detail-drawer.vue';
 
 interface OverviewFilter {
   categoryId: undefined | number;
@@ -45,14 +45,15 @@ interface StatCardItem {
 }
 
 const router = useRouter();
+const route = useRoute();
 const filter = ref<OverviewFilter>({
   categoryId: undefined,
   keyword: '',
   registerType: '',
   status: '',
 });
-const detailOpen = ref(false);
-const currentModel = ref<null | ModelRecord>(null);
+const deviceFilterIds = ref<string[]>([]);
+const detailDrawerRef = ref<InstanceType<typeof ModelDetailDrawer>>();
 
 const categoryOptions = computed(() =>
   categories.value.map((item) => ({ label: item.categoryName, value: item.id })),
@@ -145,9 +146,23 @@ const filteredModels = computed(() => {
     if (keyword && !model.modelName.toLowerCase().includes(keyword)) {
       return false;
     }
+    if (
+      deviceFilterIds.value.length > 0 &&
+      !getModelResultRows(model.id).some((row) =>
+        deviceFilterIds.value.includes(row.deviceId),
+      )
+    ) {
+      return false;
+    }
     return true;
   });
 });
+
+const deviceFilterLabel = computed(() => deviceFilterIds.value.join('、'));
+
+const deviceMatchCount = computed(() =>
+  deviceFilterIds.value.length > 0 ? filteredModels.value.length : 0,
+);
 
 function getCategoryName(categoryId: number) {
   return categories.value.find((item) => item.id === categoryId)?.categoryName ?? '-';
@@ -160,50 +175,47 @@ function handleReset() {
     registerType: '',
     status: '',
   };
+  deviceFilterIds.value = [];
 }
 
 function openDetail(model: ModelRecord) {
-  currentModel.value = model;
-  detailOpen.value = true;
+  detailDrawerRef.value?.open(model);
 }
 
 function goCompare(model: ModelRecord) {
-  router.push({ path: '/model-comparison/task', query: { categoryId: model.categoryId } });
+  router.push({
+    path: '/model-comparison/task',
+    query: {
+      deviceType: getCategoryDeviceType(model.categoryId),
+      modelId: String(model.id),
+    },
+  });
 }
 
-function goResult() {
-  router.push('/model-manage/list');
+function goResult(model: ModelRecord) {
+  router.push({
+    path: '/model-manage/list',
+    query: {
+      categoryId: String(model.categoryId),
+      keyword: model.modelName,
+    },
+  });
 }
 
-const detailDescriptionItems = computed(() => {
-  const model = currentModel.value;
+function clearDeviceFilter() {
+  deviceFilterIds.value = [];
+}
 
-  if (!model) {
-    return [];
+onMounted(() => {
+  const rawDeviceId = route.query.deviceId;
+
+  if (typeof rawDeviceId === 'string' && rawDeviceId.trim()) {
+    deviceFilterIds.value = rawDeviceId
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
-
-  return [
-    { content: getCategoryName(model.categoryId), label: '模型分类' },
-    { content: model.registerType, label: '注册方式' },
-    { content: `${model.statPeriod} 天`, label: '统计周期' },
-    { content: model.status, label: '模型状态' },
-    { content: model.enabled ? '已开启' : '未开启', label: '自动任务' },
-    { content: model.registerTime, label: '注册时间' },
-    { content: model.description || '-', label: '模型简介' },
-  ];
 });
-
-const detailInputParams = computed(() =>
-  currentModel.value ? getModelParams(currentModel.value.id).input : [],
-);
-const detailOutputParams = computed(() =>
-  currentModel.value ? getModelParams(currentModel.value.id).output : [],
-);
-const detailExecRecords = computed(() =>
-  currentModel.value
-    ? execRecords.value.filter((item) => item.modelId === currentModel.value?.id).slice(0, 3)
-    : [],
-);
 </script>
 
 <template>
@@ -247,6 +259,24 @@ const detailExecRecords = computed(() =>
           placeholder="搜索模型名称"
         />
       </PlatformQueryPanel>
+
+      <div v-if="deviceFilterIds.length > 0" class="model-overview-device-hint">
+        <span class="model-overview-device-hint__text">
+          已按设备
+          <strong>{{ deviceFilterLabel }}</strong>
+          过滤，命中
+          <strong>{{ deviceMatchCount }}</strong>
+          个模型
+        </span>
+        <PlatformButton
+          scene="action"
+          size="small"
+          type="link"
+          @click="clearDeviceFilter"
+        >
+          清除设备筛选
+        </PlatformButton>
+      </div>
 
       <section class="model-overview-card-grid">
         <article
@@ -292,7 +322,7 @@ const detailExecRecords = computed(() =>
               scene="action"
               size="small"
               type="link"
-              @click.stop="goResult"
+              @click.stop="goResult(model)"
             >
               查看结果
             </PlatformButton>
@@ -313,56 +343,8 @@ const detailExecRecords = computed(() =>
       </section>
     </div>
 
-    <PlatformDrawer
-      v-model:open="detailOpen"
-      destroy-on-close
-      size="large"
-      title="模型详情"
-    >
-      <div v-if="currentModel" class="model-overview-detail">
-        <h4 class="model-overview-detail__title">{{ currentModel.modelName }}</h4>
-        <PlatformDescriptions :items="detailDescriptionItems" />
-
-        <h4 class="model-overview-detail__subtitle">输入参数</h4>
-        <ul class="model-overview-param-group">
-          <li v-for="param in detailInputParams" :key="param.paramKey">
-            <span class="model-overview-param-key">{{ param.paramKey }}</span>
-            <span>{{ param.paramName }}</span>
-            <PlatformStatusTag :label="param.paramType" status="processing" />
-            <PlatformStatusTag
-              v-if="param.required"
-              label="必填"
-              status="warning"
-            />
-            <span>默认值：{{ param.defaultValue || '-' }}</span>
-            <p>{{ param.description }}</p>
-          </li>
-        </ul>
-
-        <h4 class="model-overview-detail__subtitle">输出参数</h4>
-        <ul class="model-overview-param-group">
-          <li v-for="param in detailOutputParams" :key="param.paramKey">
-            <span class="model-overview-param-key">{{ param.paramKey }}</span>
-            <span>{{ param.paramName }}</span>
-            <PlatformStatusTag :label="param.paramType" status="processing" />
-            <p>{{ param.description }}</p>
-          </li>
-        </ul>
-
-        <h4 class="model-overview-detail__subtitle">最近执行</h4>
-        <ul class="model-overview-exec-group">
-          <li v-for="record in detailExecRecords" :key="record.execNo">
-            <span class="model-overview-exec-no">{{ record.execNo }}</span>
-            <span>{{ record.startTime }}</span>
-            <PlatformStatusTag
-              :label="execStatusMeta[record.status].label"
-              :status="execStatusMeta[record.status].status"
-            />
-          </li>
-          <li v-if="detailExecRecords.length === 0">暂无执行记录</li>
-        </ul>
-      </div>
-    </PlatformDrawer>
+    <!-- 模型详情 -->
+    <ModelDetailDrawer ref="detailDrawerRef" />
   </Page>
 </template>
 
@@ -384,6 +366,27 @@ const detailExecRecords = computed(() =>
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--st-layout-section-gap);
+}
+
+.model-overview-device-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 18px;
+  background: hsl(var(--primary) / 10%);
+  border-radius: 8px;
+}
+
+.model-overview-device-hint__text {
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.model-overview-device-hint__text strong {
+  color: hsl(var(--primary));
+  font-weight: 700;
 }
 
 .model-overview-card {
@@ -454,61 +457,6 @@ const detailExecRecords = computed(() =>
   grid-column: 1 / -1;
   padding: 40px 0;
   text-align: center;
-  color: hsl(var(--muted-foreground));
-}
-
-.model-overview-detail__title {
-  margin: 0 0 14px;
-  font-size: 16px;
-}
-
-.model-overview-detail__subtitle {
-  margin: 18px 0 10px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.model-overview-param-group,
-.model-overview-exec-group {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.model-overview-param-group li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
-  background: hsl(var(--accent) / 40%);
-  border-radius: var(--st-radius-control);
-}
-
-.model-overview-param-group li p {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 12px;
-  color: hsl(var(--muted-foreground));
-}
-
-.model-overview-param-key {
-  font-family: monospace;
-  color: hsl(var(--primary));
-}
-
-.model-overview-exec-group li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.model-overview-exec-no {
-  font-family: monospace;
   color: hsl(var(--muted-foreground));
 }
 

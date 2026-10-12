@@ -2,7 +2,7 @@
 import type { PlatformNoticeListItem } from '@st/platform-ui';
 import type { EChartsOption } from 'echarts';
 
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -22,6 +22,8 @@ import { preferences } from '@vben/preferences';
 
 import { execRecords, getModelResultRows, models, tasks } from '../../model/data';
 
+type RouteQuery = Record<string, string>;
+
 type ModuleEntry = {
   color: string;
   icon: string;
@@ -30,8 +32,26 @@ type ModuleEntry = {
   path: string;
 };
 
+type StatusStripItem = {
+  count: number;
+  key: string;
+  label: string;
+  path: string;
+  query?: RouteQuery;
+};
+
 type PendingItem = PlatformNoticeListItem & {
   path: string;
+  query?: RouteQuery;
+};
+
+type TaskNoticeItem = PlatformNoticeListItem & {
+  taskId: number;
+};
+
+type ExecNoticeItem = PlatformNoticeListItem & {
+  modelName: string;
+  taskId: null | number;
 };
 
 type StatCardItem = {
@@ -45,17 +65,35 @@ type StatCardItem = {
 const router = useRouter();
 const userStore = useUserStore();
 
-const currentUserName = '系统管理员';
+const currentUserName = computed(
+  () =>
+    userStore.userInfo?.realName ||
+    userStore.userInfo?.username ||
+    '系统管理员',
+);
+const avatarText = computed(() => currentUserName.value.slice(0, 1) || '系');
 const avatarSrc = computed(
   () => userStore.userInfo?.avatar || preferences.app.defaultAvatar,
 );
 
+const greetingText = computed(() => {
+  const hour = new Date().getHours();
+
+  if (hour < 6) return '凌晨好';
+  if (hour < 9) return '早上好';
+  if (hour < 12) return '上午好';
+  if (hour < 14) return '中午好';
+  if (hour < 18) return '下午好';
+  return '晚上好';
+});
+
 const moduleEntries: ModuleEntry[] = [
-  { color: '#3b82f6', icon: 'lucide:chart-pie', key: 'overview', label: '模型概览', path: '/model-overview/dashboard' },
-  { color: '#16a34a', icon: 'lucide:boxes', key: 'manage', label: '模型管理', path: '/model-manage/list' },
-  { color: '#8b5cf6', icon: 'lucide:git-compare-arrows', key: 'compare', label: '数据比对', path: '/model-comparison/task' },
-  { color: '#f59e0b', icon: 'lucide:list-checks', key: 'task', label: '模型任务', path: '/model-task/list' },
-  { color: '#0ea5e9', icon: 'lucide:folder-tree', key: 'category', label: '模型类别', path: '/model-category/manage' },
+  { color: '#3b82f6', icon: 'lucide:chart-pie', key: 'overview', label: '模型概览', path: '/model/overview' },
+  { color: '#16a34a', icon: 'lucide:boxes', key: 'manage', label: '模型管理', path: '/model/manage' },
+  { color: '#8b5cf6', icon: 'lucide:git-compare-arrows', key: 'compare', label: '数据比对', path: '/model/compare' },
+  { color: '#f59e0b', icon: 'lucide:list-checks', key: 'task', label: '模型任务', path: '/model/task' },
+  { color: '#0ea5e9', icon: 'lucide:folder-tree', key: 'category', label: '模型类别', path: '/model/category' },
+  { color: '#14b8a6', icon: 'lucide:radar', key: 'anomaly', label: '异物检测分析', path: '/model/anomaly' },
 ];
 
 const publishedModels = computed(() =>
@@ -106,11 +144,11 @@ const statCards = computed<StatCardItem[]>(() => [
   { description: '最近评估高危设备', title: '高危设备数', type: 'danger', unit: '台', value: riskDevices.value.length },
 ]);
 
-const statusStrip = computed(() => [
-  { count: publishedModels.value.length, key: 'published', label: '已发布', path: '/model-overview/dashboard' },
-  { count: draftModels.value.length, key: 'draft', label: '草稿', path: '/model-manage/list' },
-  { count: offlineModels.value.length, key: 'offline', label: '已下架', path: '/model-manage/list' },
-  { count: runningTasks.value.length, key: 'task', label: '运行中任务', path: '/model-task/list' },
+const statusStrip = computed<StatusStripItem[]>(() => [
+  { count: publishedModels.value.length, key: 'published', label: '已发布', path: '/model/manage', query: { status: '已发布' } },
+  { count: draftModels.value.length, key: 'draft', label: '草稿', path: '/model/manage', query: { status: '草稿' } },
+  { count: offlineModels.value.length, key: 'offline', label: '已下架', path: '/model/manage', query: { status: '已下架' } },
+  { count: runningTasks.value.length, key: 'task', label: '运行中任务', path: '/model/task', query: { status: '运行中' } },
 ]);
 
 const execStatusPalette: Record<string, { color: string; label: string }> = {
@@ -191,8 +229,21 @@ const execNoticeStatusMap: Record<string, PlatformNoticeListItem['status']> = {
   运行中: 'info',
 };
 
+const abnormalExecTarget = computed(() => {
+  const exec = abnormalExecs.value[0];
+
+  if (!exec) {
+    return undefined;
+  }
+
+  const model = models.value.find((item) => item.id === exec.modelId);
+
+  return { modelName: model?.modelName ?? '', taskId: exec.taskId };
+});
+
 const pendingItems = computed<PendingItem[]>(() => {
   const items: PendingItem[] = [];
+  const abnormalTarget = abnormalExecTarget.value;
 
   if (draftModels.value.length > 0) {
     items.push({
@@ -200,7 +251,8 @@ const pendingItems = computed<PendingItem[]>(() => {
       actionText: '去处理',
       description: draftModels.value.map((item) => item.modelName).join('、'),
       meta: '模型管理',
-      path: '/model-manage/list',
+      path: '/model/manage',
+      query: { status: '草稿' },
       status: 'warning',
       tag: '待发布',
       title: `${draftModels.value.length} 个草稿模型待发布`,
@@ -215,7 +267,12 @@ const pendingItems = computed<PendingItem[]>(() => {
         .map((item) => item.errorMsg || `${item.execNo} ${item.status}`)
         .join('；'),
       meta: '模型任务',
-      path: '/model-task/list',
+      path: '/model/task',
+      query: abnormalTarget?.taskId
+        ? { taskId: String(abnormalTarget.taskId) }
+        : abnormalTarget?.modelName
+          ? { keyword: abnormalTarget.modelName }
+          : undefined,
       status: 'danger',
       tag: '执行异常',
       title: `${abnormalExecs.value.length} 条执行记录异常`,
@@ -228,7 +285,8 @@ const pendingItems = computed<PendingItem[]>(() => {
       actionText: '去复核',
       description: `设备编号：${riskDevices.value.join('、')}`,
       meta: '模型概览',
-      path: '/model-overview/dashboard',
+      path: '/model/overview',
+      query: { deviceId: riskDevices.value.join(',') },
       status: 'danger',
       tag: '高危设备',
       title: `${riskDevices.value.length} 台高危设备待复核`,
@@ -241,7 +299,8 @@ const pendingItems = computed<PendingItem[]>(() => {
       actionText: '去看看',
       description: offlineModels.value.map((item) => item.modelName).join('、'),
       meta: '模型管理',
-      path: '/model-manage/list',
+      path: '/model/manage',
+      query: { status: '已下架' },
       status: 'default',
       tag: '已下架',
       title: `${offlineModels.value.length} 个模型处于下架状态`,
@@ -251,25 +310,26 @@ const pendingItems = computed<PendingItem[]>(() => {
   return items;
 });
 
-const taskListItems = computed<PlatformNoticeListItem[]>(() =>
+const taskListItems = computed<TaskNoticeItem[]>(() =>
   tasks.value.map((task) => {
     const model = models.value.find((item) => item.id === task.modelId);
     const running = task.status === '运行中';
 
     return {
       id: `task-${task.id}`,
-      actionText: running ? '立即执行' : '已暂停',
+      actionText: running ? '查看任务' : '已暂停',
       description: `模型：${model?.modelName ?? '-'} · 上次执行 ${task.lastRunTime || '暂无'}`,
       disabled: !running,
       meta: `下次执行 ${task.nextExecTime}`,
       status: running ? 'success' : 'default',
       tag: task.cronDesc,
+      taskId: task.id,
       title: task.taskName,
     };
   }),
 );
 
-const recentExecItems = computed<PlatformNoticeListItem[]>(() =>
+const recentExecItems = computed<ExecNoticeItem[]>(() =>
   [...execRecords.value]
     .sort((a, b) => b.startTime.localeCompare(a.startTime))
     .slice(0, 6)
@@ -278,21 +338,53 @@ const recentExecItems = computed<PlatformNoticeListItem[]>(() =>
 
       return {
         id: record.execNo,
+        actionText: '查看记录',
         description: `${record.status} · 耗时 ${(record.costMs / 1000).toFixed(0)}s · 设备 ${record.deviceCount} 台`,
         meta: record.startTime,
+        modelName: model?.modelName ?? record.execNo,
         status: execNoticeStatusMap[record.status],
         tag: record.triggerType,
+        taskId: record.taskId,
         title: model?.modelName ?? record.execNo,
       };
     }),
 );
 
-function openPath(path: string) {
-  router.push(path);
+const pendingRefreshing = ref(false);
+
+function openPath(path: string, query?: RouteQuery) {
+  router.push(query && Object.keys(query).length > 0 ? { path, query } : path);
 }
 
 function handlePendingAction(item: PlatformNoticeListItem) {
-  openPath((item as PendingItem).path);
+  const pending = item as PendingItem;
+
+  openPath(pending.path, pending.query);
+}
+
+function handleTaskAction(item: PlatformNoticeListItem) {
+  openPath('/model/task', {
+    taskId: String((item as TaskNoticeItem).taskId),
+  });
+}
+
+function handleExecAction(item: PlatformNoticeListItem) {
+  const exec = item as ExecNoticeItem;
+
+  openPath(
+    '/model/task',
+    exec.taskId
+      ? { taskId: String(exec.taskId) }
+      : { keyword: exec.modelName },
+  );
+}
+
+function handleRefreshPending() {
+  pendingRefreshing.value = true;
+  window.setTimeout(() => {
+    pendingRefreshing.value = false;
+    window.message.success('待处理事项已刷新');
+  }, 300);
 }
 </script>
 
@@ -301,14 +393,14 @@ function handlePendingAction(item: PlatformNoticeListItem) {
     <div class="workbench-home">
       <section class="workbench-home__hero">
         <Avatar :size="68" :src="avatarSrc">
-          系
+          {{ avatarText }}
         </Avatar>
 
         <div class="workbench-home__hero-copy">
           <div class="workbench-home__hero-row">
             <div class="workbench-home__hero-text">
               <div class="workbench-home__greeting-row">
-                <p class="workbench-home__greeting">下午好，{{ currentUserName }}</p>
+                <p class="workbench-home__greeting">{{ greetingText }}，{{ currentUserName }}</p>
               </div>
               <p class="workbench-home__subtitle">
                 欢迎使用模型管理平台，当前共
@@ -340,7 +432,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
               <PlatformSectionAction
                 icon="lucide:chevron-right"
                 label="模型概览"
-                @click="openPath('/model-overview/dashboard')"
+                @click="openPath('/model/overview')"
               />
             </template>
 
@@ -364,7 +456,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
                   :key="item.key"
                   class="workbench-home__access-link"
                   type="button"
-                  @click="openPath(item.path)"
+                  @click="openPath(item.path, item.query)"
                 >
                   {{ item.label }} {{ item.count }}
                 </button>
@@ -390,7 +482,8 @@ function handlePendingAction(item: PlatformNoticeListItem) {
               <PlatformSectionAction
                 kind="refresh"
                 label="刷新"
-                @click="() => {}"
+                :loading="pendingRefreshing"
+                @click="handleRefreshPending"
               />
             </template>
 
@@ -412,7 +505,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
                 <PlatformSectionAction
                   icon="lucide:chevron-right"
                   label="全部任务"
-                  @click="openPath('/model-task/list')"
+                  @click="openPath('/model/task')"
                 />
               </template>
 
@@ -421,7 +514,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
                 :items="taskListItems"
                 empty-text="暂无定时任务"
                 variant="workbench"
-                @action="openPath('/model-task/list')"
+                @action="handleTaskAction"
               />
             </PlatformSection>
 
@@ -433,7 +526,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
                 <PlatformSectionAction
                   kind="more"
                   label="更多记录"
-                  @click="openPath('/model-task/list')"
+                  @click="openPath('/model/task')"
                 />
               </template>
 
@@ -442,6 +535,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
                 :items="recentExecItems"
                 empty-text="暂无执行记录"
                 variant="workbench"
+                @action="handleExecAction"
               />
             </PlatformSection>
           </div>
@@ -650,7 +744,7 @@ function handlePendingAction(item: PlatformNoticeListItem) {
   }
 
   .workbench-home__shortcut-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 

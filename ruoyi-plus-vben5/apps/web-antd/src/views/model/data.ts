@@ -200,12 +200,12 @@ export const models = ref<ModelRecord[]>([
     categoryId: 1,
     registerType: '本地注册',
     statPeriod: 60,
-    status: '草稿',
-    enabled: false,
+    status: '已发布',
+    enabled: true,
     description: '通过振动频谱特征识别扶梯梯级链与主驱动异常。',
     registerTime: '2026-09-10 11:02:00',
-    lastRunTime: '',
-    lastRunStatus: '',
+    lastRunTime: '2026-09-20 02:00:00',
+    lastRunStatus: '成功',
   },
   {
     id: 3,
@@ -226,12 +226,12 @@ export const models = ref<ModelRecord[]>([
     categoryId: 2,
     registerType: '第三方注册',
     statPeriod: 60,
-    status: '草稿',
-    enabled: false,
+    status: '已发布',
+    enabled: true,
     description: '登记自集团算法中台，按载荷分布评估电梯疲劳程度。',
     registerTime: '2026-09-14 10:15:00',
-    lastRunTime: '',
-    lastRunStatus: '',
+    lastRunTime: '2026-09-18 03:00:00',
+    lastRunStatus: '成功',
   },
   {
     id: 5,
@@ -351,9 +351,12 @@ const deviceBaseScore: Record<string, number> = {
   'T-06': 84,
 };
 
+/** 各模型相对设备基准分的偏移，用于让同一台设备在不同模型下产生可比对的评分差异 */
 const modelScoreOffset: Record<number, number> = {
   1: 0,
+  2: -12,
   3: -6,
+  4: 7,
   5: 4,
 };
 
@@ -364,7 +367,8 @@ function toLevel(score: number): HealthLevel {
 }
 
 export function getModelResultRows(modelId: number): ModelResultRow[] {
-  const deviceType = getCategoryDeviceType(modelId);
+  const model = models.value.find((item) => item.id === modelId);
+  const deviceType = model ? getCategoryDeviceType(model.categoryId) : '';
   const offset = modelScoreOffset[modelId] ?? 0;
 
   return devices.value
@@ -411,6 +415,26 @@ export const tasks = ref<ModelTaskRecord[]>([
     nextExecTime: '2026-09-22 03:00:00',
     status: '运行中',
     remark: '',
+  },
+  {
+    id: 3,
+    taskName: '自动扶梯振动分析任务',
+    modelId: 2,
+    cronDesc: '每日 02:00',
+    lastRunTime: '2026-09-20 02:00:00',
+    nextExecTime: '2026-09-22 02:00:00',
+    status: '运行中',
+    remark: '与扶梯健康度评估同批次执行',
+  },
+  {
+    id: 4,
+    taskName: '垂直电梯载荷分析任务',
+    modelId: 4,
+    cronDesc: '每周一 03:00',
+    lastRunTime: '2026-09-18 03:00:00',
+    nextExecTime: '2026-09-22 03:00:00',
+    status: '运行中',
+    remark: '第三方模型，按周汇总载荷分布',
   },
 ]);
 

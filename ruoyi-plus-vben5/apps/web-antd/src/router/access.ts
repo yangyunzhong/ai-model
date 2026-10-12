@@ -64,7 +64,8 @@ function backMenuToVbenMenu(
       menu.path !== '/' &&
       menu.component === 'Layout' &&
       onlyChild &&
-      onlyChild.children.length === 0
+      // 后端返回的叶子菜单没有 children 字段(null/undefined)，需按空处理
+      (onlyChild.children?.length ?? 0) === 0
     ) {
       // 路径沿用子菜单，保证已有页面链接不受影响
       menu.path = onlyChild.path;

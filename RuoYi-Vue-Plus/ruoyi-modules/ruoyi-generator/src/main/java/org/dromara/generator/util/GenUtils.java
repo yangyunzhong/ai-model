@@ -209,11 +209,13 @@ public class GenUtils {
      * @return 截取后的列类型
      */
     public static Integer getColumnLength(String columnType) {
-        if (StringUtils.indexOf(columnType, "(") > 0) {
-            String length = StringUtils.substringBetween(columnType, "(", ")");
-            return Integer.valueOf(length);
-        } else {
+    if (StringUtils.indexOf(columnType, "(") > 0) {
+        String length = StringUtils.substringBetween(columnType, "(", ")");
+        if (!StringUtils.isNumeric(length)) {
             return 0;
         }
+        return Integer.valueOf(length);
     }
+    return 0;
+}
 }

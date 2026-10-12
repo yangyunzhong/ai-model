@@ -1,21 +1,15 @@
 <script setup lang="ts">
 import type { TableProps } from 'antdv-next';
 
-import type { DeviceTypeOption, ModelCategory } from '../data';
+import type { CatalogVO } from '#/api/model/model';
 
-import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
 import {
   PlatformButton,
-  PlatformEditForm,
-  PlatformFormItem,
   PlatformIcon,
-  PlatformInput,
-  PlatformModal,
-  PlatformSelect,
   PlatformStatusTag,
   PlatformTable,
   PlatformTableToolbar,
@@ -23,21 +17,20 @@ import {
 } from '@st/platform-ui';
 import { Popconfirm, Space } from 'antdv-next';
 
-import {
-  addCategory,
-  categories,
-  countModelsByCategory,
-  deviceTypeOptions,
-  isCategoryNameDuplicated,
-  removeCategory,
-  updateCategory,
-} from '../data';
+import { catalogList, catalogRemove } from '#/api/model';
 
-const router = useRouter();
+import CategoryModal from './modal/category-modal.vue';
+
 const loading = ref(false);
+const rows = ref<CatalogVO[]>([]);
+const total = ref(0);
+const queryParams = reactive({
+  pageNum: 1,
+  pageSize: 10,
+});
 
 const tableColumns = computed<TableProps['columns']>(() => [
-  { dataIndex: 'categoryName', key: 'categoryName', title: '类别名称', width: 160 },
+  { dataIndex: 'catalogName', key: 'catalogName', title: '类别名称', width: 160 },
   { dataIndex: 'deviceType', key: 'deviceType', title: '关联设备类型', width: 140 },
   { key: 'modelCount', title: '模型数量', width: 110 },
   { dataIndex: 'createTime', key: 'createTime', title: '创建时间', width: 180 },
@@ -46,106 +39,59 @@ const tableColumns = computed<TableProps['columns']>(() => [
 ]);
 
 const pagination = computed(() => ({
-  pageSize: 10,
-  showTotal: (total: number) => `共 ${total} 条`,
-  total: categories.value.length,
+  current: queryParams.pageNum,
+  pageSize: queryParams.pageSize,
+  showTotal: (t: number) => `共 ${t} 条`,
+  total: total.value,
 }));
 
-function statusMetaOf(status: ModelCategory['status']) {
-  return status === '启用'
-    ? { label: '启用', status: 'success' as const }
-    : { label: '停用', status: 'default' as const };
+function statusMetaOf(status?: string) {
+  return status === '停用'
+    ? { label: '停用', status: 'default' as const }
+    : { label: '启用', status: 'success' as const };
 }
 
-function goModelManage(category: ModelCategory) {
-  window.message.info(`已跳转模型管理并按「${category.categoryName}」过滤`);
-  router.push({
-    path: '/model-manage/list',
-    query: { categoryId: category.id },
-  });
+async function loadList() {
+  loading.value = true;
+  try {
+    const res = await catalogList({
+      pageNum: queryParams.pageNum,
+      pageSize: queryParams.pageSize,
+    });
+    rows.value = res.rows ?? [];
+    total.value = res.total ?? 0;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function handleTableChange(page: { current?: number; pageSize?: number }) {
+  queryParams.pageNum = Number(page?.current ?? 1);
+  queryParams.pageSize = Number(page?.pageSize ?? 10);
+  loadList();
 }
 
 // ==================== 新增 / 编辑类别 ====================
-const formOpen = ref(false);
-const saving = ref(false);
-const editingId = ref<undefined | number>();
-const editingHasModels = ref(false);
-const formModel = reactive({
-  categoryName: '',
-  deviceType: undefined as undefined | DeviceTypeOption,
-  remark: '',
-  status: '启用' as ModelCategory['status'],
-});
+const categoryModalRef = ref<InstanceType<typeof CategoryModal>>();
 
-const formTitle = computed(() => (editingId.value ? '编辑类别' : '新增类别'));
-
-function openCreate() {
-  editingId.value = undefined;
-  editingHasModels.value = false;
-  formModel.categoryName = '';
-  formModel.deviceType = undefined;
-  formModel.remark = '';
-  formModel.status = '启用';
-  formOpen.value = true;
+function handleAdd() {
+  categoryModalRef.value?.openCreate();
 }
 
-function openEdit(category: ModelCategory) {
-  editingId.value = category.id;
-  editingHasModels.value = countModelsByCategory(category.id) > 0;
-  formModel.categoryName = category.categoryName;
-  formModel.deviceType = category.deviceType;
-  formModel.remark = category.remark;
-  formModel.status = category.status;
-  formOpen.value = true;
+function handleEdit(category: CatalogVO) {
+  categoryModalRef.value?.openEdit(category);
 }
 
-async function handleSave() {
-  if (!formModel.categoryName.trim()) {
-    window.message.warning('请输入类别名称');
-    return;
+async function handleDelete(category: CatalogVO) {
+  // deleteWithMsg 已自动弹成功提示
+  await catalogRemove(category.id);
+  if (rows.value.length === 1 && queryParams.pageNum > 1) {
+    queryParams.pageNum -= 1;
   }
-  if (isCategoryNameDuplicated(formModel.categoryName, editingId.value)) {
-    window.message.error('类别名称已存在，请修改');
-    return;
-  }
-  if (formModel.deviceType === undefined) {
-    window.message.warning('请选择关联设备类型');
-    return;
-  }
-
-  saving.value = true;
-  try {
-    if (editingId.value) {
-      updateCategory(editingId.value, {
-        categoryName: formModel.categoryName.trim(),
-        deviceType: formModel.deviceType,
-        remark: formModel.remark,
-        status: formModel.status,
-      });
-      window.message.success('类别已更新');
-    } else {
-      addCategory({
-        categoryName: formModel.categoryName.trim(),
-        deviceType: formModel.deviceType,
-        remark: formModel.remark,
-        status: formModel.status,
-      });
-      window.message.success('类别已新增');
-    }
-    formOpen.value = false;
-  } finally {
-    saving.value = false;
-  }
+  await loadList();
 }
 
-function handleDelete(category: ModelCategory) {
-  if (countModelsByCategory(category.id) > 0) {
-    window.message.error('该类别下存在模型，请先移除或迁移该类别下的模型');
-    return;
-  }
-  removeCategory(category.id);
-  window.message.success('类别已删除');
-}
+onMounted(loadList);
 </script>
 
 <template>
@@ -157,9 +103,12 @@ function handleDelete(category: ModelCategory) {
       />
 
       <section class="platform-surface model-category-surface">
-        <PlatformTableToolbar :tools="['refresh', 'setting', 'fullscreen']">
+        <PlatformTableToolbar
+          :tools="['refresh', 'setting', 'fullscreen']"
+          @refresh="loadList"
+        >
           <template #actions>
-            <PlatformButton scene="toolbar" type="primary" @click="openCreate">
+            <PlatformButton scene="toolbar" type="primary" @click="handleAdd">
               <template #icon>
                 <PlatformIcon icon="icon-xinzeng" />
               </template>
@@ -170,27 +119,21 @@ function handleDelete(category: ModelCategory) {
 
         <PlatformTable
           :columns="tableColumns"
-          :data-source="categories"
+          :data-source="rows"
           :loading="loading"
           :pagination="pagination"
           row-key="id"
           size="middle"
+          @change="handleTableChange"
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'modelCount'">
-              <PlatformButton
-                scene="action"
-                size="small"
-                type="link"
-                @click="goModelManage(record as ModelCategory)"
-              >
-                {{ countModelsByCategory((record as ModelCategory).id) }} 个
-              </PlatformButton>
+              <span class="model-category-empty">—</span>
             </template>
             <template v-else-if="column.key === 'status'">
               <PlatformStatusTag
-                :label="statusMetaOf((record as ModelCategory).status).label"
-                :status="statusMetaOf((record as ModelCategory).status).status"
+                :label="statusMetaOf((record as CatalogVO).status).label"
+                :status="statusMetaOf((record as CatalogVO).status).status"
               />
             </template>
             <template v-else-if="column.key === 'action'">
@@ -199,14 +142,14 @@ function handleDelete(category: ModelCategory) {
                   scene="action"
                   size="small"
                   type="link"
-                  @click="openEdit(record as ModelCategory)"
+                  @click="handleEdit(record as CatalogVO)"
                 >
                   编辑
                 </PlatformButton>
                 <Popconfirm
                   placement="left"
                   title="确认删除该类别？"
-                  @confirm="handleDelete(record as ModelCategory)"
+                  @confirm="handleDelete(record as CatalogVO)"
                 >
                   <PlatformButton danger scene="action" size="small" type="link">
                     删除
@@ -219,52 +162,7 @@ function handleDelete(category: ModelCategory) {
       </section>
     </div>
 
-    <PlatformModal
-      v-model:open="formOpen"
-      :confirm-loading="saving"
-      :title="formTitle"
-      destroy-on-close
-      width="560px"
-      @ok="handleSave"
-    >
-      <PlatformEditForm :model="formModel" layout="vertical">
-        <PlatformFormItem label="类别名称" required>
-          <PlatformInput
-            v-model:value="formModel.categoryName"
-            :maxlength="50"
-            placeholder="请输入类别名称（全局唯一，≤50 字符）"
-          />
-        </PlatformFormItem>
-        <PlatformFormItem
-          label="关联设备类型"
-          required
-        >
-          <PlatformSelect
-            v-model:value="formModel.deviceType"
-            :disabled="editingHasModels"
-            :options="deviceTypeOptions"
-            :placeholder="editingHasModels ? '已被模型引用，不允许修改' : '请选择关联设备类型'"
-          />
-        </PlatformFormItem>
-        <PlatformFormItem label="状态">
-          <PlatformSelect
-            v-model:value="formModel.status"
-            :options="[
-              { label: '启用', value: '启用' },
-              { label: '停用', value: '停用' },
-            ]"
-            placeholder="请选择状态"
-          />
-        </PlatformFormItem>
-        <PlatformFormItem label="备注说明">
-          <PlatformInput
-            v-model:value="formModel.remark"
-            :maxlength="200"
-            placeholder="请输入备注（≤200 字符）"
-          />
-        </PlatformFormItem>
-      </PlatformEditForm>
-    </PlatformModal>
+    <CategoryModal ref="categoryModalRef" @success="loadList" />
   </Page>
 </template>
 
@@ -281,5 +179,9 @@ function handleDelete(category: ModelCategory) {
   flex-direction: column;
   gap: var(--st-layout-section-gap);
   padding: var(--st-module-content-padding);
+}
+
+.model-category-empty {
+  color: var(--ant-color-text-quaternary, rgb(0 0 0 / 25%));
 }
 </style>
