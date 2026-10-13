@@ -1,12 +1,9 @@
 package org.dromara.model.service.impl;
 
 import org.dromara.common.core.utils.MapstructUtils;
-import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,7 +14,6 @@ import org.dromara.model.mapper.ModelResultMapper;
 import org.dromara.model.service.IModelResultService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Collection;
 
 /**
@@ -41,7 +37,7 @@ public class ModelResultServiceImpl implements IModelResultService {
      */
     @Override
     public ModelResultVo queryById(String id){
-        return baseMapper.selectVoById(id);
+        return baseMapper.selectVoByIdWithRef(id);
     }
 
     /**
@@ -53,8 +49,7 @@ public class ModelResultServiceImpl implements IModelResultService {
      */
     @Override
     public TableDataInfo<ModelResultVo> queryPageList(ModelResultBo bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<ModelResult> lqw = buildQueryWrapper(bo);
-        Page<ModelResultVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        Page<ModelResultVo> result = baseMapper.selectVoPageWithRef(pageQuery.build(), bo);
         return TableDataInfo.build(result);
     }
 
@@ -66,29 +61,7 @@ public class ModelResultServiceImpl implements IModelResultService {
      */
     @Override
     public List<ModelResultVo> queryList(ModelResultBo bo) {
-        LambdaQueryWrapper<ModelResult> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
-    }
-
-    private LambdaQueryWrapper<ModelResult> buildQueryWrapper(ModelResultBo bo) {
-        Map<String, Object> params = bo.getParams();
-        LambdaQueryWrapper<ModelResult> lqw = Wrappers.lambdaQuery();
-        lqw.orderByAsc(ModelResult::getId);
-        lqw.eq(StringUtils.isNotBlank(bo.getExecId()), ModelResult::getExecId, bo.getExecId());
-        lqw.eq(StringUtils.isNotBlank(bo.getModelId()), ModelResult::getModelId, bo.getModelId());
-        lqw.eq(StringUtils.isNotBlank(bo.getDeviceId()), ModelResult::getDeviceId, bo.getDeviceId());
-        lqw.like(StringUtils.isNotBlank(bo.getDeviceName()), ModelResult::getDeviceName, bo.getDeviceName());
-        lqw.eq(StringUtils.isNotBlank(bo.getLineId()), ModelResult::getLineId, bo.getLineId());
-        lqw.eq(StringUtils.isNotBlank(bo.getStationId()), ModelResult::getStationId, bo.getStationId());
-        lqw.eq(StringUtils.isNotBlank(bo.getDeviceType()), ModelResult::getDeviceType, bo.getDeviceType());
-        lqw.eq(bo.getHealthScore() != null, ModelResult::getHealthScore, bo.getHealthScore());
-        lqw.eq(StringUtils.isNotBlank(bo.getHealthLevel()), ModelResult::getHealthLevel, bo.getHealthLevel());
-        lqw.eq(bo.getDimBody() != null, ModelResult::getDimBody, bo.getDimBody());
-        lqw.eq(bo.getDimCondition() != null, ModelResult::getDimCondition, bo.getDimCondition());
-        lqw.eq(bo.getDimFault() != null, ModelResult::getDimFault, bo.getDimFault());
-        lqw.eq(bo.getDimMaintain() != null, ModelResult::getDimMaintain, bo.getDimMaintain());
-        lqw.eq(bo.getDimEnv() != null, ModelResult::getDimEnv, bo.getDimEnv());
-        return lqw;
+        return baseMapper.selectVoListWithRef(bo);
     }
 
     /**

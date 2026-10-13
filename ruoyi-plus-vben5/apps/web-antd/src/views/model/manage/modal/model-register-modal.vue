@@ -236,25 +236,29 @@ function resolveUploadError(error: unknown) {
   return '请检查文件内容、登录状态或网络后重试';
 }
 
-function ensureDraftSaved() {
-  if (formModel.id === undefined || formModel.id === null) {
-    window.message.info('请先保存草稿，再上传算法脚本');
-    return false;
+/**
+ * 上传脚本前确保存在模型记录：
+ * 已保存直接复用；未保存时校验基本信息后静默创建草稿，拿到 modelId 再上传。
+ */
+async function ensureDraftSaved(): Promise<null | string | number> {
+  if (formModel.id !== undefined && formModel.id !== null) {
+    return formModel.id;
   }
-  return true;
+  if (!validateForm()) {
+    return null;
+  }
+  const modelId = await definitionAdd(buildDefinitionForm('草稿'));
+  formModel.id = modelId;
+  // 让父级列表同步到这条自动创建的草稿
+  emit('success');
+  return modelId;
 }
 
 function handleUploadScript() {
-  if (!ensureDraftSaved()) {
-    return;
-  }
   scriptInputRef.value?.click();
 }
 
 function handleUploadRequirements() {
-  if (!ensureDraftSaved()) {
-    return;
-  }
   requirementsInputRef.value?.click();
 }
 
@@ -288,9 +292,6 @@ function handleRequirementsSelected(event: Event) {
 
 /** 统一提交脚本与可选的 requirements.txt */
 async function submitScript() {
-  if (!ensureDraftSaved()) {
-    return;
-  }
   const file = pendingScript.value;
   if (!file) {
     window.message.warning('请先选择 .py 脚本文件');
@@ -298,7 +299,11 @@ async function submitScript() {
   }
   uploading.value = true;
   try {
-    await scriptUpload(file, formModel.id, undefined, pendingRequirements.value ?? undefined);
+    const modelId = await ensureDraftSaved();
+    if (modelId === null) {
+      return;
+    }
+    await scriptUpload(file, modelId, undefined, pendingRequirements.value ?? undefined);
     pendingScript.value = null;
     pendingRequirements.value = null;
     await loadScripts();

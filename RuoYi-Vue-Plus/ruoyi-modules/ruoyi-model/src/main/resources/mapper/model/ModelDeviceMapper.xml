@@ -3,4 +3,70 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.model.mapper.ModelDeviceMapper">
+
+    <!-- 设备查询公共列（metro_device，device_name/device_type 按业务口径计算转换） -->
+    <sql id="deviceRefColumns">
+        SELECT t.id,
+               COALESCE(NULLIF(TRIM(CONCAT_WS(' ', t.brand, t.model_spec)), ''), NULLIF(t.registration_code, ''), t.id) AS device_name,
+               CASE t.device_type WHEN 1 THEN '自动扶梯' WHEN 2 THEN '垂直电梯' ELSE CONCAT('未知类型(', t.device_type, ')') END AS device_type,
+               t.line_id,
+               l.name AS line_name,
+               t.station_id,
+               s.name AS station_name,
+               t.device_variety_code,
+               t.running_status,
+               t.brand,
+               t.registration_code,
+               t.model_spec,
+               t.location_detail,
+               t.commissioning_date,
+               t.remark
+        FROM metro_device t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+    </sql>
+
+    <!-- 设备查询公共条件 -->
+    <sql id="deviceRefWhere">
+        <where>
+            <if test="bo.id != null and bo.id != ''">AND t.id = #{bo.id}</if>
+            <if test="bo.deviceName != null and bo.deviceName != ''">
+                AND (t.brand LIKE CONCAT('%', #{bo.deviceName}, '%')
+                     OR t.model_spec LIKE CONCAT('%', #{bo.deviceName}, '%')
+                     OR t.registration_code LIKE CONCAT('%', #{bo.deviceName}, '%'))
+            </if>
+            <if test="bo.deviceType != null and bo.deviceType != ''">
+                AND t.device_type = CASE #{bo.deviceType} WHEN '自动扶梯' THEN 1 WHEN '垂直电梯' THEN 2 ELSE -1 END
+            </if>
+            <if test="bo.lineId != null and bo.lineId != ''">AND t.line_id = #{bo.lineId}</if>
+            <if test="bo.stationId != null and bo.stationId != ''">AND t.station_id = #{bo.stationId}</if>
+            <if test="bo.deviceVarietyCode != null and bo.deviceVarietyCode != ''">AND t.device_variety_code = #{bo.deviceVarietyCode}</if>
+            <if test="bo.runningStatus != null">AND t.running_status = #{bo.runningStatus}</if>
+            <if test="bo.brand != null and bo.brand != ''">AND t.brand LIKE CONCAT('%', #{bo.brand}, '%')</if>
+            <if test="bo.registrationCode != null and bo.registrationCode != ''">AND t.registration_code LIKE CONCAT('%', #{bo.registrationCode}, '%')</if>
+            <if test="bo.modelSpec != null and bo.modelSpec != ''">AND t.model_spec LIKE CONCAT('%', #{bo.modelSpec}, '%')</if>
+            <if test="bo.locationDetail != null and bo.locationDetail != ''">AND t.location_detail LIKE CONCAT('%', #{bo.locationDetail}, '%')</if>
+            <if test="bo.remark != null and bo.remark != ''">AND t.remark LIKE CONCAT('%', #{bo.remark}, '%')</if>
+        </where>
+        ORDER BY t.line_id ASC, t.station_id ASC, t.id ASC
+    </sql>
+
+    <!-- 联表分页查询设备列表（附带线路名称、车站名称） -->
+    <select id="selectVoPageWithRef" resultType="org.dromara.model.domain.vo.ModelDeviceVo">
+        <include refid="deviceRefColumns"/>
+        <include refid="deviceRefWhere"/>
+    </select>
+
+    <!-- 联表查询设备列表（附带线路名称、车站名称） -->
+    <select id="selectVoListWithRef" resultType="org.dromara.model.domain.vo.ModelDeviceVo">
+        <include refid="deviceRefColumns"/>
+        <include refid="deviceRefWhere"/>
+    </select>
+
+    <!-- 联表查询设备详情（附带线路名称、车站名称） -->
+    <select id="selectVoByIdWithRef" resultType="org.dromara.model.domain.vo.ModelDeviceVo">
+        <include refid="deviceRefColumns"/>
+        WHERE t.id = #{id}
+    </select>
+
 </mapper>

@@ -91,6 +91,35 @@ public class ModelTaskController extends BaseController {
     }
 
     /**
+     * 立即执行模型任务
+     *
+     * @param id 主键
+     */
+    @SaCheckPermission("model:task:edit")
+    @Log(title = "模型任务", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PostMapping("/runNow/{id}")
+    public R<Void> runNow(@NotNull(message = "主键不能为空")
+                          @PathVariable String id) {
+        modelTaskService.runNow(id);
+        return R.ok("已触发立即执行，可在执行记录中查看进度");
+    }
+
+    /**
+     * 切换模型任务启停状态
+     *
+     * @param id 主键
+     */
+    @SaCheckPermission("model:task:edit")
+    @Log(title = "模型任务", businessType = BusinessType.UPDATE)
+    @RepeatSubmit()
+    @PostMapping("/toggleStatus/{id}")
+    public R<Void> toggleStatus(@NotNull(message = "主键不能为空")
+                                @PathVariable String id) {
+        return toAjax(modelTaskService.toggleStatus(id));
+    }
+
+    /**
      * 删除模型任务
      *
      * @param ids 主键串

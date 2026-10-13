@@ -3,4 +3,54 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.model.mapper.ModelResultMapper">
+
+    <!-- 模型执行结果明细查询公共条件 -->
+    <sql id="resultRefWhere">
+        <where>
+            <if test="bo.id != null and bo.id != ''">AND t.id = #{bo.id}</if>
+            <if test="bo.execId != null and bo.execId != ''">AND t.exec_id = #{bo.execId}</if>
+            <if test="bo.modelId != null and bo.modelId != ''">AND t.model_id = #{bo.modelId}</if>
+            <if test="bo.deviceId != null and bo.deviceId != ''">AND t.device_id = #{bo.deviceId}</if>
+            <if test="bo.deviceName != null and bo.deviceName != ''">AND t.device_name LIKE CONCAT('%', #{bo.deviceName}, '%')</if>
+            <if test="bo.lineId != null and bo.lineId != ''">AND t.line_id = #{bo.lineId}</if>
+            <if test="bo.stationId != null and bo.stationId != ''">AND t.station_id = #{bo.stationId}</if>
+            <if test="bo.deviceType != null and bo.deviceType != ''">AND t.device_type = #{bo.deviceType}</if>
+            <if test="bo.healthScore != null">AND t.health_score = #{bo.healthScore}</if>
+            <if test="bo.healthLevel != null and bo.healthLevel != ''">AND t.health_level = #{bo.healthLevel}</if>
+            <if test="bo.dimBody != null">AND t.dim_body = #{bo.dimBody}</if>
+            <if test="bo.dimCondition != null">AND t.dim_condition = #{bo.dimCondition}</if>
+            <if test="bo.dimFault != null">AND t.dim_fault = #{bo.dimFault}</if>
+            <if test="bo.dimMaintain != null">AND t.dim_maintain = #{bo.dimMaintain}</if>
+            <if test="bo.dimEnv != null">AND t.dim_env = #{bo.dimEnv}</if>
+        </where>
+        ORDER BY t.id ASC
+    </sql>
+
+    <!-- 联表分页查询模型执行结果明细列表（附带线路名称、车站名称） -->
+    <select id="selectVoPageWithRef" resultType="org.dromara.model.domain.vo.ModelResultVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_result t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        <include refid="resultRefWhere"/>
+    </select>
+
+    <!-- 联表查询模型执行结果明细列表（附带线路名称、车站名称） -->
+    <select id="selectVoListWithRef" resultType="org.dromara.model.domain.vo.ModelResultVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_result t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        <include refid="resultRefWhere"/>
+    </select>
+
+    <!-- 联表查询模型执行结果明细详情（附带线路名称、车站名称） -->
+    <select id="selectVoByIdWithRef" resultType="org.dromara.model.domain.vo.ModelResultVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_result t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        WHERE t.id = #{id}
+    </select>
+
 </mapper>

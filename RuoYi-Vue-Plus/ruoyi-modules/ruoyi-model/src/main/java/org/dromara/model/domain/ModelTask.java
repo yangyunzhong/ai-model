@@ -55,6 +55,11 @@ public class ModelTask extends BaseEntity {
     private String status;
 
     /**
+     * 调度类型：cron=周期调度，once=一次性指定时间
+     */
+    private String scheduleType;
+
+    /**
      * SnailJob 作业ID
      */
     private Long jobId;

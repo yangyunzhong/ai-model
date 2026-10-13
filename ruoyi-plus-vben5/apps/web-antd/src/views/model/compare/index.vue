@@ -2,17 +2,24 @@
 import type { TableProps } from 'antdv-next';
 
 import type {
-  DeviceRecord,
-  DeviceTypeOption,
-  ModelRecord,
-  ModelResultRow,
-} from '../data';
+  CatalogVO,
+  ComparisonExecuteCell,
+  ComparisonExecuteVO,
+  DefinitionVO,
+  DeviceVO,
+} from '#/api/model';
 
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
+import {
+  catalogList,
+  comparisonRecordExecute,
+  definitionList,
+  deviceList,
+} from '#/api/model';
 import {
   PlatformButton,
   PlatformIcon,
@@ -25,35 +32,21 @@ import {
 } from '@st/platform-ui';
 import { Checkbox, Empty } from 'antdv-next';
 
-import {
-  addExecRecord,
-  devices,
-  deviceTypeOptions,
-  getCategoryDeviceType,
-  getModelResultRows,
-  healthLevelMeta,
-  models,
-} from '../data';
+type TagStatus = 'default' | 'error' | 'processing' | 'success' | 'warning';
 
-const selectedDeviceType = ref<DeviceTypeOption>('自动扶梯');
-const selectedDeviceIds = ref<string[]>([]);
-const selectedModelIds = ref<number[]>([]);
-const deviceModalOpen = ref(false);
-const comparing = ref(false);
-const compareStep = ref(0);
-const hasResult = ref(false);
-
-const compareStepTexts = ['加载算法脚本…', '注入设备数据…', '计算评分…'];
+interface Option {
+  label: string;
+  value: string;
+}
 
 interface MatrixRow {
-  baseModelId: number;
-  byModel: Record<number, ModelResultRow | undefined>;
+  byModel: Record<string, ComparisonExecuteCell | undefined>;
   deviceId: string;
   deviceName: string;
   /** 各模型健康等级是否不一致 */
   divergent: boolean;
   /** 各数值列在该设备下的最优 / 最差模型（并列或无数据时为空） */
-  extremes: Record<string, { best: null | number; worst: null | number }>;
+  extremes: Record<string, { best: null | string; worst: null | string }>;
   /** 各模型总分极差（最高分 - 最低分） */
   spread: number;
 }
@@ -68,55 +61,105 @@ const SCORE_FIELDS = [
   'dimEnv',
 ] as const;
 
-/** 读取某模型某数值列的得分 */
-function scoreOf(result: ModelResultRow | undefined, field: string) {
-  if (!result) {
-    return undefined;
-  }
+const LEVEL_META: Record<string, { label: string; status: TagStatus }> = {
+  healthy: { label: '健康', status: 'success' },
+  subhealthy: { label: '亚健康', status: 'warning' },
+  danger: { label: '高危', status: 'error' },
+  健康: { label: '健康', status: 'success' },
+  亚健康: { label: '亚健康', status: 'warning' },
+  高危: { label: '高危', status: 'error' },
+};
 
-  if (field === 'total') {
-    return result.totalScore;
-  }
-
-  const value = result[field as keyof ModelResultRow];
-
-  return typeof value === 'number' ? value : undefined;
+function levelMetaOf(level?: string) {
+  return LEVEL_META[level ?? ''] ?? { label: level ?? '-', status: 'default' as TagStatus };
 }
 
+// ==================== 状态 ====================
+const deviceTypeOptions = ref<Option[]>([]);
+const selectedDeviceType = ref<string>('');
+const allDevices = ref<DeviceVO[]>([]);
+const selectedDeviceIds = ref<string[]>([]);
+const modelOptions = ref<Option[]>([]);
+const selectedModelIds = ref<string[]>([]);
+const loadingDevices = ref(false);
+const deviceModalOpen = ref(false);
+const comparing = ref(false);
+const hasResult = ref(false);
+const result = ref<ComparisonExecuteVO | null>(null);
 const matrixRows = ref<MatrixRow[]>([]);
+
+const resultModels = computed(() => result.value?.models ?? []);
+
+const selectedModelOptions = computed(() =>
+  resultModels.value.map((model) => ({
+    id: String(model.modelId),
+    modelName: model.modelName,
+  })),
+);
+
+const selectedDeviceCount = computed(() => selectedDeviceIds.value.length);
+
+const canCompare = computed(
+  () =>
+    selectedDeviceIds.value.length > 0 &&
+    selectedModelIds.value.length >= 2 &&
+    selectedModelIds.value.length <= 5,
+);
 
 /** 配置变化后作废已有比对结果，避免矩阵与当前选择不一致 */
 function invalidateResult() {
   hasResult.value = false;
+  result.value = null;
   matrixRows.value = [];
 }
 
-function devicesOfType(type: DeviceTypeOption) {
-  return devices.value.filter((item) => item.type === type);
+// ==================== 数据加载 ====================
+async function loadDeviceTypes() {
+  const res = await catalogList({ pageNum: 1, pageSize: 200 });
+  const list: CatalogVO[] = res.rows ?? [];
+  const types = [...new Set(list.map((item) => item.deviceType).filter(Boolean))];
+  deviceTypeOptions.value = types.map((type) => ({ label: type, value: type }));
 }
 
-const publishedModelOptions = computed(() =>
-  models.value
+async function loadDevices() {
+  if (!selectedDeviceType.value) {
+    allDevices.value = [];
+    return;
+  }
+  loadingDevices.value = true;
+  try {
+    const res = await deviceList({
+      pageNum: 1,
+      pageSize: 1000,
+      deviceType: selectedDeviceType.value,
+    });
+    allDevices.value = res.rows ?? [];
+  } finally {
+    loadingDevices.value = false;
+  }
+}
+
+async function loadModels() {
+  if (!selectedDeviceType.value) {
+    modelOptions.value = [];
+    return;
+  }
+  const res = await definitionList({ pageNum: 1, pageSize: 500 });
+  const list: DefinitionVO[] = res.rows ?? [];
+  modelOptions.value = list
     .filter(
       (model) =>
         model.status === '已发布' &&
-        getCategoryDeviceType(model.categoryId) === selectedDeviceType.value,
+        model.deviceType === selectedDeviceType.value,
     )
-    .map((model) => ({ label: model.modelName, value: model.id })),
-);
+    .map((model) => ({ label: model.modelName, value: String(model.id) }));
+}
 
-const selectedModels = computed<ModelRecord[]>(() =>
-  models.value.filter((model) => selectedModelIds.value.includes(model.id)),
-);
-
-const canCompare = computed(
-  () => selectedDeviceIds.value.length > 0 && selectedModelIds.value.length >= 2,
-);
-
-watch(selectedDeviceType, () => {
+watch(selectedDeviceType, async () => {
   selectedDeviceIds.value = [];
   selectedModelIds.value = [];
   invalidateResult();
+  await Promise.all([loadDevices(), loadModels()]);
 });
 
 // ==================== 概览页跳转回填 ====================
@@ -127,19 +170,16 @@ watch(
   async (query) => {
     const rawDeviceType = String(query.deviceType ?? '');
 
-    if (deviceTypeOptions.some((option) => option.value === rawDeviceType)) {
-      selectedDeviceType.value = rawDeviceType as DeviceTypeOption;
+    if (deviceTypeOptions.value.some((option) => option.value === rawDeviceType)) {
+      selectedDeviceType.value = rawDeviceType;
     }
 
-    // 等待设备品种切换触发的重置完成后再回填模型
+    // 等待设备品种切换触发的模型加载完成后再回填模型
     await nextTick();
+    await loadModels();
 
-    const rawModelId = Number(query.modelId);
-
-    if (
-      Number.isFinite(rawModelId) &&
-      publishedModelOptions.value.some((option) => option.value === rawModelId)
-    ) {
+    const rawModelId = String(query.modelId ?? '');
+    if (modelOptions.value.some((option) => option.value === rawModelId)) {
       selectedModelIds.value = [rawModelId];
     }
   },
@@ -147,14 +187,15 @@ watch(
 );
 
 function handleModelChange(value: unknown) {
-  const ids = Array.isArray(value) ? (value as number[]) : [];
-
-  selectedModelIds.value = ids.length > 5 ? ids.slice(0, 5) : ids;
-  invalidateResult();
+  const ids = Array.isArray(value) ? value.map((item) => String(item)) : [];
 
   if (ids.length > 5) {
+    selectedModelIds.value = ids.slice(0, 5);
     window.message.warning('最多选择 5 个模型');
+  } else {
+    selectedModelIds.value = ids;
   }
+  invalidateResult();
 }
 
 function handleReset() {
@@ -165,146 +206,134 @@ function handleReset() {
 
 // ==================== 设备选择弹窗 ====================
 const deviceGroups = computed(() => {
-  const lines = new Map<string, Map<string, DeviceRecord[]>>();
+  const lines = new Map<string, DeviceVO[]>();
 
-  for (const device of devicesOfType(selectedDeviceType.value)) {
-    if (!lines.has(device.line)) {
-      lines.set(device.line, new Map());
-    }
-    const stations = lines.get(device.line)!;
+  for (const device of allDevices.value) {
+    const key =
+      device.lineId === undefined || device.lineId === null || device.lineId === ''
+        ? '未分组'
+        : String(device.lineId);
 
-    if (!stations.has(device.station)) {
-      stations.set(device.station, []);
+    if (!lines.has(key)) {
+      lines.set(key, []);
     }
-    stations.get(device.station)!.push(device);
+    lines.get(key)!.push(device);
   }
 
-  return [...lines.entries()].map(([line, stations]) => ({
-    devices: [...stations.values()].flat(),
-    line,
-    stations: [...stations.entries()].map(([station, devices]) => ({
-      devices,
-      station,
-    })),
-  }));
+  return [...lines.entries()].map(([line, devices]) => ({ devices, line }));
 });
 
-function isDeviceChecked(device: DeviceRecord) {
-  return selectedDeviceIds.value.includes(device.id);
+function isDeviceChecked(device: DeviceVO) {
+  return selectedDeviceIds.value.includes(String(device.id));
 }
 
-function toggleDevice(device: DeviceRecord) {
+function toggleDevice(device: DeviceVO) {
+  const id = String(device.id);
+
   if (isDeviceChecked(device)) {
-    selectedDeviceIds.value = selectedDeviceIds.value.filter(
-      (id) => id !== device.id,
-    );
+    selectedDeviceIds.value = selectedDeviceIds.value.filter((item) => item !== id);
   } else {
-    selectedDeviceIds.value = [...selectedDeviceIds.value, device.id];
+    selectedDeviceIds.value = [...selectedDeviceIds.value, id];
   }
   invalidateResult();
 }
 
-function isLineAllChecked(devices: DeviceRecord[]) {
+function isLineAllChecked(devices: DeviceVO[]) {
   return devices.every((device) => isDeviceChecked(device));
 }
 
-function toggleLine(devices: DeviceRecord[]) {
+function toggleLine(devices: DeviceVO[]) {
   const allChecked = isLineAllChecked(devices);
+  const ids = new Set(devices.map((device) => String(device.id)));
 
   if (allChecked) {
-    const ids = new Set(devices.map((device) => device.id));
-    selectedDeviceIds.value = selectedDeviceIds.value.filter(
-      (id) => !ids.has(id),
-    );
+    selectedDeviceIds.value = selectedDeviceIds.value.filter((id) => !ids.has(id));
   } else {
     const merged = new Set(selectedDeviceIds.value);
-    devices.forEach((device) => merged.add(device.id));
+    ids.forEach((id) => merged.add(id));
     selectedDeviceIds.value = [...merged];
   }
   invalidateResult();
 }
 
 function toggleAllDevices() {
-  const all = devicesOfType(selectedDeviceType.value);
-
   selectedDeviceIds.value =
-    selectedDeviceIds.value.length === all.length
+    selectedDeviceIds.value.length === allDevices.value.length
       ? []
-      : all.map((device) => device.id);
+      : allDevices.value.map((device) => String(device.id));
   invalidateResult();
 }
 
 // ==================== 比对执行 ====================
-function startCompare() {
+async function startCompare() {
   if (!canCompare.value) {
     window.message.warning('请先选择至少 1 台设备和 2 个模型');
     return;
   }
 
   comparing.value = true;
-  compareStep.value = 0;
-
-  window.setTimeout(() => {
-    compareStep.value = 1;
-  }, 400);
-  window.setTimeout(() => {
-    compareStep.value = 2;
-  }, 900);
-  window.setTimeout(() => {
-    buildMatrix();
-    comparing.value = false;
+  try {
+    const vo = await comparisonRecordExecute({
+      deviceType: selectedDeviceType.value,
+      deviceIds: selectedDeviceIds.value,
+      modelIds: selectedModelIds.value,
+    });
+    result.value = vo;
+    buildMatrix(vo);
     hasResult.value = true;
     window.message.success('比对完成');
-  }, 1500);
+  } finally {
+    comparing.value = false;
+  }
 }
 
-function buildMatrix() {
+function cellValue(cell: ComparisonExecuteCell | undefined, field: string) {
+  if (!cell) {
+    return undefined;
+  }
+  if (field === 'total') {
+    return cell.healthScore;
+  }
+  const value = cell[field as keyof ComparisonExecuteCell];
+  return typeof value === 'number' ? value : undefined;
+}
+
+function buildMatrix(vo: ComparisonExecuteVO) {
+  const modelIds = vo.models.map((model) => String(model.modelId));
+  const detailMap = new Map<string, ComparisonExecuteCell>();
+
+  for (const cell of vo.details) {
+    detailMap.set(`${String(cell.deviceId)}::${String(cell.modelId)}`, cell);
+  }
+
   const rows: MatrixRow[] = [];
-  /** 以第一个模型作为差值基准 */
-  const baseModelId = selectedModels.value[0]?.id ?? 0;
 
-  for (const deviceId of selectedDeviceIds.value) {
-    const device = devicesOfType(selectedDeviceType.value).find(
-      (item) => item.id === deviceId,
-    );
+  for (const device of vo.devices) {
+    const deviceId = String(device.deviceId);
+    const byModel: Record<string, ComparisonExecuteCell | undefined> = {};
 
-    if (!device) {
-      continue;
+    for (const modelId of modelIds) {
+      byModel[modelId] = detailMap.get(`${deviceId}::${modelId}`);
     }
 
-    const byModel: Record<number, ModelResultRow | undefined> = {};
+    const levels = modelIds
+      .map((modelId) => byModel[modelId]?.healthLevel)
+      .filter((level): level is string => Boolean(level));
 
-    for (const model of selectedModels.value) {
-      byModel[model.id] = getModelResultRows(model.id).find(
-        (row) => row.deviceId === deviceId,
-      );
-    }
-
-    const scored = selectedModels.value
-      .map((model) => ({ modelId: model.id, total: byModel[model.id]?.totalScore }))
-      .filter(
-        (item): item is { modelId: number; total: number } =>
-          typeof item.total === 'number',
-      );
-    const totals = scored.map((item) => item.total);
+    const totals = modelIds
+      .map((modelId) => byModel[modelId]?.healthScore)
+      .filter((score): score is number => typeof score === 'number');
     const maxTotal = totals.length > 0 ? Math.max(...totals) : 0;
     const minTotal = totals.length > 0 ? Math.min(...totals) : 0;
-    const hasSpread = maxTotal > minTotal;
-    const levels = selectedModels.value
-      .map((model) => byModel[model.id]?.healthLevel)
-      .filter(Boolean);
 
     // 逐列计算最优 / 最差模型，供单元格高低分标记使用
     const extremes: MatrixRow['extremes'] = {};
 
     for (const field of SCORE_FIELDS) {
-      const points = selectedModels.value
-        .map((model) => ({
-          modelId: model.id,
-          value: scoreOf(byModel[model.id], field),
-        }))
+      const points = modelIds
+        .map((modelId) => ({ modelId, value: cellValue(byModel[modelId], field) }))
         .filter(
-          (item): item is { modelId: number; value: number } =>
+          (item): item is { modelId: string; value: number } =>
             typeof item.value === 'number',
         );
       const values = points.map((item) => item.value);
@@ -323,31 +352,20 @@ function buildMatrix() {
     }
 
     rows.push({
-      baseModelId,
       byModel,
-      deviceId: device.id,
-      deviceName: device.name,
+      deviceId,
+      deviceName: device.deviceName,
       divergent: new Set(levels).size > 1,
       extremes,
-      spread: hasSpread ? maxTotal - minTotal : 0,
+      spread: maxTotal > minTotal ? maxTotal - minTotal : 0,
     });
   }
 
   matrixRows.value = rows;
-
-  for (const model of selectedModels.value) {
-    addExecRecord({
-      deviceCount: selectedDeviceIds.value.length,
-      modelId: model.id,
-      status: '成功',
-      taskId: null,
-      triggerType: '数据比对',
-    });
-  }
 }
 
 /** 判定数值单元格背景：该列在该设备下的最高 / 最低 */
-function scoreCellClass(record: unknown, modelId: number, field: string) {
+function scoreCellClass(record: unknown, modelId: string, field: string) {
   const extreme = (record as MatrixRow).extremes[field];
   const classes: string[] = [];
 
@@ -363,49 +381,57 @@ function scoreCellClass(record: unknown, modelId: number, field: string) {
 }
 
 const matrixColumns = computed<TableProps['columns']>(() => [
-  { fixed: 'left', key: 'device', title: '设备', width: 220 },
-  ...selectedModels.value.map((model) => ({
-    children: [
-      {
-        customCell: (record: unknown) => ({
-          class: (record as MatrixRow).divergent
-            ? 'compare-cell--divergent'
-            : '',
-        }),
-        key: `m${model.id}:level`,
-        title: '健康等级',
-        width: 104,
-      },
-      {
-        customCell: (record: unknown) => ({
-          class: scoreCellClass(record, model.id, 'total'),
-        }),
-        key: `m${model.id}:total`,
-        title: '总分',
-        width: 110,
-      },
-      ...(
-        [
-          ['dimBody', '本体/20'],
-          ['dimCondition', '工况/25'],
-          ['dimFault', '故障/25'],
-          ['dimMaintain', '维保/20'],
-          ['dimEnv', '环境/10'],
-        ] as const
-      ).map(([field, title]) => ({
-        customCell: (record: unknown) => ({
-          class: scoreCellClass(record, model.id, field),
-        }),
-        key: `m${model.id}:${field}`,
-        title,
-        width: 84,
-      })),
-    ],
-    key: `m${model.id}`,
-    title: model.modelName,
-  })),
+  { fixed: 'left', key: 'device', title: '设备', width: 200 },
+  ...resultModels.value.map((model) => {
+    const modelId = String(model.modelId);
+
+    return {
+      children: [
+        {
+          customCell: (record: unknown) => ({
+            class: (record as MatrixRow).divergent
+              ? 'compare-cell--divergent'
+              : '',
+          }),
+          key: `m${modelId}:level`,
+          title: '健康等级',
+          width: 104,
+        },
+        {
+          customCell: (record: unknown) => ({
+            class: scoreCellClass(record, modelId, 'total'),
+          }),
+          key: `m${modelId}:total`,
+          title: '总分',
+          width: 110,
+        },
+        ...(
+          [
+            ['dimBody', '本体/20'],
+            ['dimCondition', '工况/25'],
+            ['dimFault', '故障/25'],
+            ['dimMaintain', '维保/20'],
+            ['dimEnv', '环境/10'],
+          ] as const
+        ).map(([field, title]) => ({
+          customCell: (record: unknown) => ({
+            class: scoreCellClass(record, modelId, field),
+          }),
+          key: `m${modelId}:${field}`,
+          title,
+          width: 90,
+        })),
+      ],
+      key: `m${modelId}`,
+      title: model.modelName,
+    };
+  }),
   { fixed: 'right', key: 'spread', title: '极差', width: 84 },
 ]);
+
+const baseModelId = computed(() =>
+  resultModels.value.length > 0 ? String(resultModels.value[0]!.modelId) : '',
+);
 
 function rowClassName(record: unknown) {
   return (record as MatrixRow).divergent ? 'compare-row--divergent' : '';
@@ -415,7 +441,7 @@ function parseColumnKey(key: unknown) {
   const raw = String(key);
   const [modelPart = '', field = ''] = raw.split(':');
 
-  return { field, modelId: Number(modelPart.replace('m', '')) };
+  return { field, modelId: modelPart.replace('m', '') };
 }
 
 function getCellRow(record: unknown, key: unknown) {
@@ -424,17 +450,17 @@ function getCellRow(record: unknown, key: unknown) {
   return (record as MatrixRow).byModel[modelId];
 }
 
-/** 单元格总分相对基准模型的差值，基准模型自身返回 null */
+/** 单元格总分相对基准模型的差值，基准模型自身返回空 */
 function totalDiffText(record: unknown, key: unknown) {
   const row = record as MatrixRow;
   const { modelId } = parseColumnKey(key);
 
-  if (modelId === row.baseModelId) {
+  if (modelId === baseModelId.value) {
     return '';
   }
 
-  const base = row.byModel[row.baseModelId]?.totalScore;
-  const current = row.byModel[modelId]?.totalScore;
+  const base = row.byModel[baseModelId.value]?.healthScore;
+  const current = row.byModel[modelId]?.healthScore;
 
   if (typeof base !== 'number' || typeof current !== 'number') {
     return '';
@@ -464,27 +490,49 @@ function totalDiffClass(record: unknown, key: unknown) {
 }
 
 const distributionStats = computed(() =>
-  selectedModels.value.map((model) => {
-    const counts = { 亚健康: 0, 健康: 0, 高危: 0 };
+  resultModels.value.map((model) => {
+    const modelId = String(model.modelId);
+    const counts = { danger: 0, healthy: 0, subhealthy: 0 };
 
     for (const row of matrixRows.value) {
-      const level = row.byModel[model.id]?.healthLevel;
+      const level = row.byModel[modelId]?.healthLevel;
 
-      if (level) {
-        counts[level] += 1;
+      if (level && level in counts) {
+        counts[level as keyof typeof counts] += 1;
       }
     }
 
-    return { counts, model };
+    return { counts, model: { id: modelId, modelName: model.modelName } };
   }),
 );
 
 /** 结论一致性汇总：各模型对同一台设备给出相同健康等级的台数 */
 const consistencyStat = computed(() => {
+  const summary = result.value?.summary;
+
+  if (summary) {
+    return {
+      consistent: summary.consistent,
+      divergent: summary.divergent,
+      total: summary.total,
+    };
+  }
+
   const total = matrixRows.value.length;
   const divergent = matrixRows.value.filter((row) => row.divergent).length;
 
   return { consistent: total - divergent, divergent, total };
+});
+
+onMounted(async () => {
+  await loadDeviceTypes();
+
+  const rawDeviceType = String(route.query.deviceType ?? '');
+  if (deviceTypeOptions.value.some((option) => option.value === rawDeviceType)) {
+    selectedDeviceType.value = rawDeviceType;
+  } else if (deviceTypeOptions.value.length === 1) {
+    selectedDeviceType.value = deviceTypeOptions.value[0]!.value;
+  }
 });
 </script>
 
@@ -508,21 +556,25 @@ const consistencyStat = computed(() => {
           </div>
           <div class="model-compare-config__item">
             <span class="model-compare-config__label">比对设备</span>
-            <PlatformButton scene="toolbar" @click="deviceModalOpen = true">
+            <PlatformButton
+              :disabled="!selectedDeviceType"
+              scene="toolbar"
+              @click="deviceModalOpen = true"
+            >
               <template #icon>
                 <PlatformIcon icon="lucide:list-checks" />
               </template>
               选择设备
             </PlatformButton>
             <span class="model-compare-config__hint">
-              已选 {{ selectedDeviceIds.length }} 台
+              已选 {{ selectedDeviceCount }} 台
             </span>
           </div>
           <div class="model-compare-config__item model-compare-config__item--wide">
             <span class="model-compare-config__label">比对模型</span>
             <PlatformSelect
               :value="selectedModelIds"
-              :options="publishedModelOptions"
+              :options="modelOptions"
               mode="multiple"
               :max-tag-count="3"
               allow-clear
@@ -550,15 +602,7 @@ const consistencyStat = computed(() => {
       <PlatformSection title="比对结果">
         <div v-if="comparing" class="model-compare-loading">
           <span class="model-compare-loading__spinner"></span>
-          <ul class="model-compare-loading__steps">
-            <li
-              v-for="(text, index) in compareStepTexts"
-              :key="text"
-              :class="{ 'model-compare-loading__step--active': index <= compareStep }"
-            >
-              {{ text }}
-            </li>
-          </ul>
+          <p>正在比对各模型对所选设备的计算结果…</p>
         </div>
 
         <template v-else-if="hasResult">
@@ -595,7 +639,7 @@ const consistencyStat = computed(() => {
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'device'">
                 <div class="model-compare-device-cell">
-                  <strong>{{ record.deviceName }}</strong>
+                  <strong>{{ record.deviceName || record.deviceId }}</strong>
                   <span>{{ record.deviceId }}</span>
                 </div>
               </template>
@@ -611,15 +655,15 @@ const consistencyStat = computed(() => {
                 <template v-if="parseColumnKey(column.key).field === 'level'">
                   <PlatformStatusTag
                     v-if="getCellRow(record, column.key)"
-                    :label="healthLevelMeta[getCellRow(record, column.key)!.healthLevel].label"
-                    :status="healthLevelMeta[getCellRow(record, column.key)!.healthLevel].status"
+                    :label="levelMetaOf(getCellRow(record, column.key)!.healthLevel).label"
+                    :status="levelMetaOf(getCellRow(record, column.key)!.healthLevel).status"
                   />
                   <span v-else>-</span>
                 </template>
                 <template v-else-if="parseColumnKey(column.key).field === 'total'">
                   <div class="compare-score">
                     <span class="compare-score__value">
-                      {{ getCellRow(record, column.key)?.totalScore ?? '-' }}
+                      {{ getCellRow(record, column.key)?.healthScore ?? '-' }}
                     </span>
                     <span
                       v-if="totalDiffText(record, column.key)"
@@ -631,7 +675,11 @@ const consistencyStat = computed(() => {
                   </div>
                 </template>
                 <template v-else>
-                  {{ getCellRow(record, column.key)?.[parseColumnKey(column.key).field as keyof ModelResultRow] ?? '-' }}
+                  {{
+                    getCellRow(record, column.key)?.[
+                      parseColumnKey(column.key).field as keyof ComparisonExecuteCell
+                    ] ?? '-'
+                  }}
                 </template>
               </template>
             </template>
@@ -664,22 +712,22 @@ const consistencyStat = computed(() => {
                 }"
               >
                 <span class="model-compare-conclusion__device">
-                  {{ row.deviceName }}
+                  {{ row.deviceName || row.deviceId }}
                 </span>
 
                 <span
-                  v-for="model in selectedModels"
+                  v-for="model in selectedModelOptions"
                   :key="model.id"
                   class="model-compare-conclusion__model"
                 >
                   <em>{{ model.modelName }}</em>
                   <template v-if="row.byModel[model.id]">
                     <PlatformStatusTag
-                      :label="healthLevelMeta[row.byModel[model.id]!.healthLevel].label"
-                      :status="healthLevelMeta[row.byModel[model.id]!.healthLevel].status"
+                      :label="levelMetaOf(row.byModel[model.id]!.healthLevel).label"
+                      :status="levelMetaOf(row.byModel[model.id]!.healthLevel).status"
                       variant="dot"
                     />
-                    <b>{{ row.byModel[model.id]!.totalScore }} 分</b>
+                    <b>{{ row.byModel[model.id]!.healthScore ?? '-' }} 分</b>
                   </template>
                   <span v-else>-</span>
                 </span>
@@ -700,28 +748,16 @@ const consistencyStat = computed(() => {
             >
               <h4>{{ stat.model.modelName }}</h4>
               <p>
-                <PlatformStatusTag
-                  label="健康"
-                  status="success"
-                  variant="dot"
-                />
-                {{ stat.counts['健康'] }} 台
+                <PlatformStatusTag label="健康" status="success" variant="dot" />
+                {{ stat.counts.healthy }} 台
               </p>
               <p>
-                <PlatformStatusTag
-                  label="亚健康"
-                  status="warning"
-                  variant="dot"
-                />
-                {{ stat.counts['亚健康'] }} 台
+                <PlatformStatusTag label="亚健康" status="warning" variant="dot" />
+                {{ stat.counts.subhealthy }} 台
               </p>
               <p>
-                <PlatformStatusTag
-                  label="高危"
-                  status="error"
-                  variant="dot"
-                />
-                {{ stat.counts['高危'] }} 台
+                <PlatformStatusTag label="高危" status="error" variant="dot" />
+                {{ stat.counts.danger }} 台
               </p>
             </div>
           </div>
@@ -737,16 +773,20 @@ const consistencyStat = computed(() => {
     <!-- 选择设备弹窗 -->
     <PlatformModal
       v-model:open="deviceModalOpen"
-      :title="`选择设备 - ${selectedDeviceType}`"
+      :title="`选择设备 - ${selectedDeviceType || '未选择品种'}`"
       :footer="null"
       destroy-on-close
       width="720px"
     >
       <div class="model-compare-device-picker">
         <div class="model-compare-device-picker__bar">
-          <span>已选 {{ selectedDeviceIds.length }} 台</span>
+          <span>已选 {{ selectedDeviceCount }} 台</span>
           <PlatformButton scene="toolbar" size="small" @click="toggleAllDevices">
-            {{ selectedDeviceIds.length === devicesOfType(selectedDeviceType).length && selectedDeviceIds.length > 0 ? '全不选' : '全选' }}
+            {{
+              selectedDeviceCount === allDevices.length && selectedDeviceCount > 0
+                ? '全不选'
+                : '全选'
+            }}
           </PlatformButton>
         </div>
 
@@ -757,34 +797,32 @@ const consistencyStat = computed(() => {
         >
           <Checkbox
             :checked="isLineAllChecked(group.devices)"
-            :indeterminate="!isLineAllChecked(group.devices) && group.devices.some((device) => isDeviceChecked(device))"
+            :indeterminate="
+              !isLineAllChecked(group.devices) &&
+              group.devices.some((device) => isDeviceChecked(device))
+            "
             @change="() => toggleLine(group.devices)"
           >
             {{ group.line }}（{{ group.devices.length }} 台）
           </Checkbox>
 
-          <div
-            v-for="station in group.stations"
-            :key="station.station"
-            class="model-compare-device-picker__station"
-          >
-            <span class="model-compare-device-picker__station-name">
-              {{ station.station }}
-            </span>
+          <div class="model-compare-device-picker__station">
             <Checkbox
-              v-for="device in station.devices"
+              v-for="device in group.devices"
               :key="device.id"
               :checked="isDeviceChecked(device)"
               @change="() => toggleDevice(device)"
             >
-              {{ device.name }}
+              {{ device.deviceName || device.id }}
             </Checkbox>
           </div>
         </div>
 
         <Empty
           v-if="deviceGroups.length === 0"
-          description="该品种暂无状态正常的设备"
+          :description="
+            selectedDeviceType ? '该品种暂无状态启用的设备' : '请先选择设备品种'
+          "
         />
       </div>
     </PlatformModal>
@@ -838,6 +876,8 @@ const consistencyStat = computed(() => {
   align-items: center;
   gap: 14px;
   padding: 40px 0;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
 }
 
 .model-compare-loading__spinner {
@@ -853,23 +893,6 @@ const consistencyStat = computed(() => {
   to {
     transform: rotate(360deg);
   }
-}
-
-.model-compare-loading__steps {
-  display: flex;
-  gap: 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.model-compare-loading__steps li {
-  color: hsl(var(--muted-foreground));
-}
-
-.model-compare-loading__step--active {
-  color: hsl(var(--primary));
-  font-weight: 600;
 }
 
 .model-compare-device-cell {
@@ -1091,10 +1114,5 @@ const consistencyStat = computed(() => {
   align-items: center;
   gap: 6px 14px;
   padding-left: 22px;
-}
-
-.model-compare-device-picker__station-name {
-  font-size: 12px;
-  color: hsl(var(--muted-foreground));
 }
 </style>

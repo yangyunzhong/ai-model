@@ -30,7 +30,7 @@ public class ModelAnomalyEvent extends BaseEntity {
     private String id;
 
     /**
-     * 设备ID，逻辑关联model_device.id
+     * 设备ID，逻辑关联metro_device.id
      */
     private String deviceId;
 

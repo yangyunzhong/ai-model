@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { ModelRecord } from '../data';
+import type {
+  CatalogVO,
+  DefinitionVO,
+  ExecLogVO,
+  ResultVO,
+} from '#/api/model/model';
 
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -17,20 +22,16 @@ import {
 } from '@st/platform-ui';
 
 import {
-  categories,
-  execRecords,
-  execStatusMeta,
-  getCategoryDeviceType,
-  getModelResultRows,
-  modelStatusMeta,
-  models,
-  registerTypeOptions,
-} from '../data';
+  catalogList,
+  definitionList,
+  execLogList,
+  resultList,
+} from '#/api/model';
 
 import ModelDetailDrawer from './modal/model-detail-drawer.vue';
 
 interface OverviewFilter {
-  categoryId: undefined | number;
+  categoryId: undefined | number | string;
   keyword: string;
   registerType: string;
   status: string;
@@ -55,32 +56,113 @@ const filter = ref<OverviewFilter>({
 const deviceFilterIds = ref<string[]>([]);
 const detailDrawerRef = ref<InstanceType<typeof ModelDetailDrawer>>();
 
+/** 真实数据源 */
+const definitions = ref<DefinitionVO[]>([]);
+const catalogs = ref<CatalogVO[]>([]);
+const execLogs = ref<ExecLogVO[]>([]);
+const results = ref<ResultVO[]>([]);
+
+const registerTypeOptions = [
+  { label: '本地注册', value: '本地注册' },
+  { label: '第三方注册', value: '第三方注册' },
+];
+const statusOptions = (['草稿', '已发布', '已下架'] as const).map((item) => ({
+  label: item,
+  value: item,
+}));
+
+/** 模型状态展示元数据（与后端 status 取值一致） */
+const modelStatusMeta: Record<
+  string,
+  { label: string; status: 'default' | 'success' | 'warning' }
+> = {
+  已下架: { label: '已下架', status: 'default' },
+  已归档: { label: '已归档', status: 'default' },
+  已发布: { label: '已发布', status: 'success' },
+  草稿: { label: '草稿', status: 'warning' },
+};
+
+/** 执行状态展示元数据（对应 model_exec_log.status） */
+const execStatusMeta: Record<
+  string,
+  { label: string; status: 'default' | 'error' | 'processing' | 'success' | 'warning' }
+> = {
+  成功: { label: '成功', status: 'success' },
+  失败: { label: '失败', status: 'error' },
+  运行中: { label: '运行中', status: 'processing' },
+  部分成功: { label: '部分成功', status: 'warning' },
+  超时: { label: '超时', status: 'error' },
+};
+
+function statusMetaOf(status?: string) {
+  return modelStatusMeta[status ?? ''] ?? { label: status ?? '-', status: 'default' as const };
+}
+
+function execMetaOf(status?: string) {
+  return execStatusMeta[status ?? ''] ?? { label: status ?? '-', status: 'default' as const };
+}
+
 const categoryOptions = computed(() =>
-  categories.value.map((item) => ({ label: item.categoryName, value: item.id })),
+  catalogs.value.map((item) => ({ label: item.catalogName, value: item.id })),
 );
-const statusOptions = computed(() =>
-  (['草稿', '已发布', '已下架'] as const).map((item) => ({ label: item, value: item })),
+const catalogNameMap = computed<Record<string, string>>(() =>
+  Object.fromEntries(catalogs.value.map((item) => [String(item.id), item.catalogName])),
 );
 
+function getCategoryName(catalogId?: string | number) {
+  if (catalogId === undefined || catalogId === null) {
+    return '-';
+  }
+  return catalogNameMap.value[String(catalogId)] ?? '-';
+}
+
+function toTimestamp(value?: string) {
+  if (!value) {
+    return 0;
+  }
+  const time = new Date(value.replace('T', ' ').replaceAll('-', '/')).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+/** 模型ID -> 最近一次执行记录（用于卡片「最近运行」） */
+const lastRunMap = computed<Record<string, ExecLogVO>>(() => {
+  const map: Record<string, ExecLogVO> = {};
+  for (const log of execLogs.value) {
+    const key = String(log.modelId);
+    const current = map[key];
+    if (!current || toTimestamp(log.startTime) > toTimestamp(current.startTime)) {
+      map[key] = log;
+    }
+  }
+  return map;
+});
+
+/** 模型ID -> 执行结果明细（用于设备维度过滤与高危统计） */
+const resultsByModel = computed<Record<string, ResultVO[]>>(() => {
+  const map: Record<string, ResultVO[]> = {};
+  for (const row of results.value) {
+    const key = String(row.modelId);
+    (map[key] ??= []).push(row);
+  }
+  return map;
+});
+
+function isDangerLevel(level?: string) {
+  return level === 'danger' || level === '高危';
+}
+
 const statCards = computed<StatCardItem[]>(() => {
-  const failedRecent = execRecords.value.filter((item) => {
+  const failedRecent = execLogs.value.filter((item) => {
     if (item.status !== '失败') {
       return false;
     }
-    const startTime = new Date(item.startTime.replace(/-/g, '/')).getTime();
-    return Date.now() - startTime <= 7 * 24 * 60 * 60 * 1000;
+    return Date.now() - toTimestamp(item.startTime) <= 7 * 24 * 60 * 60 * 1000;
   }).length;
 
   const riskDeviceIds = new Set<string>();
-
-  for (const model of models.value) {
-    if (model.status !== '已发布') {
-      continue;
-    }
-    for (const row of getModelResultRows(model.id)) {
-      if (row.healthLevel === '高危') {
-        riskDeviceIds.add(row.deviceId);
-      }
+  for (const row of results.value) {
+    if (isDangerLevel(row.healthLevel)) {
+      riskDeviceIds.add(String(row.deviceId));
     }
   }
 
@@ -90,28 +172,28 @@ const statCards = computed<StatCardItem[]>(() => {
       title: '模型总数',
       type: 'primary',
       unit: '个',
-      value: models.value.length,
+      value: definitions.value.length,
     },
     {
       description: '按设备类型划分',
       title: '模型分类数',
       type: 'info',
       unit: '个',
-      value: categories.value.length,
+      value: catalogs.value.length,
     },
     {
       description: '脚本上传至本平台',
       title: '本地注册数',
       type: 'success',
       unit: '个',
-      value: models.value.filter((item) => item.registerType === '本地注册').length,
+      value: definitions.value.filter((item) => item.registerType === '本地注册').length,
     },
     {
       description: '外部系统登记',
       title: '第三方注册数',
       type: 'warning',
       unit: '个',
-      value: models.value.filter((item) => item.registerType === '第三方注册').length,
+      value: definitions.value.filter((item) => item.registerType === '第三方注册').length,
     },
     {
       description: '执行失败需关注',
@@ -133,8 +215,11 @@ const statCards = computed<StatCardItem[]>(() => {
 const filteredModels = computed(() => {
   const keyword = filter.value.keyword.trim().toLowerCase();
 
-  return models.value.filter((model) => {
-    if (filter.value.categoryId !== undefined && model.categoryId !== filter.value.categoryId) {
+  return definitions.value.filter((model) => {
+    if (
+      filter.value.categoryId !== undefined &&
+      String(model.catalogId) !== String(filter.value.categoryId)
+    ) {
       return false;
     }
     if (filter.value.status && model.status !== filter.value.status) {
@@ -146,13 +231,11 @@ const filteredModels = computed(() => {
     if (keyword && !model.modelName.toLowerCase().includes(keyword)) {
       return false;
     }
-    if (
-      deviceFilterIds.value.length > 0 &&
-      !getModelResultRows(model.id).some((row) =>
-        deviceFilterIds.value.includes(row.deviceId),
-      )
-    ) {
-      return false;
+    if (deviceFilterIds.value.length > 0) {
+      const rows = resultsByModel.value[String(model.id)] ?? [];
+      if (!rows.some((row) => deviceFilterIds.value.includes(String(row.deviceId)))) {
+        return false;
+      }
     }
     return true;
   });
@@ -164,8 +247,8 @@ const deviceMatchCount = computed(() =>
   deviceFilterIds.value.length > 0 ? filteredModels.value.length : 0,
 );
 
-function getCategoryName(categoryId: number) {
-  return categories.value.find((item) => item.id === categoryId)?.categoryName ?? '-';
+function lastRunOf(model: DefinitionVO) {
+  return lastRunMap.value[String(model.id)];
 }
 
 function handleReset() {
@@ -178,25 +261,25 @@ function handleReset() {
   deviceFilterIds.value = [];
 }
 
-function openDetail(model: ModelRecord) {
+function openDetail(model: DefinitionVO) {
   detailDrawerRef.value?.open(model);
 }
 
-function goCompare(model: ModelRecord) {
+function goCompare(model: DefinitionVO) {
   router.push({
     path: '/model-comparison/task',
     query: {
-      deviceType: getCategoryDeviceType(model.categoryId),
+      deviceType: model.deviceType,
       modelId: String(model.id),
     },
   });
 }
 
-function goResult(model: ModelRecord) {
+function goResult(model: DefinitionVO) {
   router.push({
     path: '/model-manage/list',
     query: {
-      categoryId: String(model.categoryId),
+      categoryId: String(model.catalogId),
       keyword: model.modelName,
     },
   });
@@ -204,6 +287,19 @@ function goResult(model: ModelRecord) {
 
 function clearDeviceFilter() {
   deviceFilterIds.value = [];
+}
+
+async function loadData() {
+  const [defRes, catRes, logRes, resultRes] = await Promise.all([
+    definitionList({ pageNum: 1, pageSize: 500 }),
+    catalogList({ pageNum: 1, pageSize: 200 }),
+    execLogList({ pageNum: 1, pageSize: 500 }),
+    resultList({ pageNum: 1, pageSize: 1000 }),
+  ]);
+  definitions.value = defRes.rows ?? [];
+  catalogs.value = catRes.rows ?? [];
+  execLogs.value = logRes.rows ?? [];
+  results.value = resultRes.rows ?? [];
 }
 
 onMounted(() => {
@@ -215,6 +311,8 @@ onMounted(() => {
       .map((item) => item.trim())
       .filter(Boolean);
   }
+
+  loadData();
 });
 </script>
 
@@ -288,33 +386,35 @@ onMounted(() => {
           <header class="model-overview-card__header">
             <h3>{{ model.modelName }}</h3>
             <PlatformStatusTag
-              :label="modelStatusMeta[model.status].label"
-              :status="modelStatusMeta[model.status].status"
+              :label="statusMetaOf(model.status).label"
+              :status="statusMetaOf(model.status).status"
             />
           </header>
 
-          <p class="model-overview-card__time">注册时间：{{ model.registerTime }}</p>
+          <p class="model-overview-card__time">注册时间：{{ model.registerTime || '暂无' }}</p>
 
           <div class="model-overview-card__tags">
             <PlatformStatusTag
-              :label="getCategoryName(model.categoryId)"
+              :label="getCategoryName(model.catalogId)"
               status="processing"
             />
             <PlatformStatusTag
-              :label="model.registerType"
+              :label="model.registerType || '-'"
               status="default"
             />
           </div>
 
           <div class="model-overview-card__run">
             <span>最近运行</span>
-            <strong>{{ model.lastRunTime || '暂无' }}</strong>
-            <PlatformStatusTag
-              v-if="model.lastRunStatus"
-              :label="execStatusMeta[model.lastRunStatus].label"
-              :status="execStatusMeta[model.lastRunStatus].status"
-              variant="dot"
-            />
+            <template v-if="lastRunOf(model)">
+              <strong>{{ lastRunOf(model)?.startTime || '暂无' }}</strong>
+              <PlatformStatusTag
+                :label="execMetaOf(lastRunOf(model)?.status).label"
+                :status="execMetaOf(lastRunOf(model)?.status).status"
+                variant="dot"
+              />
+            </template>
+            <strong v-else>暂无</strong>
           </div>
 
           <footer class="model-overview-card__entries">

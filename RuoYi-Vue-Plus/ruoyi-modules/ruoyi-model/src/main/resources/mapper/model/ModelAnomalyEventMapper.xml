@@ -3,4 +3,53 @@
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.dromara.model.mapper.ModelAnomalyEventMapper">
+
+    <!-- 异物检测事件查询公共条件 -->
+    <sql id="anomalyRefWhere">
+        <where>
+            <if test="bo.id != null and bo.id != ''">AND t.id = #{bo.id}</if>
+            <if test="bo.deviceId != null and bo.deviceId != ''">AND t.device_id = #{bo.deviceId}</if>
+            <if test="bo.deviceName != null and bo.deviceName != ''">AND t.device_name LIKE CONCAT('%', #{bo.deviceName}, '%')</if>
+            <if test="bo.deviceType != null and bo.deviceType != ''">AND t.device_type = #{bo.deviceType}</if>
+            <if test="bo.lineId != null and bo.lineId != ''">AND t.line_id = #{bo.lineId}</if>
+            <if test="bo.stationId != null and bo.stationId != ''">AND t.station_id = #{bo.stationId}</if>
+            <if test="bo.paramName != null and bo.paramName != ''">AND t.param_name LIKE CONCAT('%', #{bo.paramName}, '%')</if>
+            <if test="bo.unit != null and bo.unit != ''">AND t.unit = #{bo.unit}</if>
+            <if test="bo.normalValue != null">AND t.normal_value = #{bo.normalValue}</if>
+            <if test="bo.abnormalValue != null">AND t.abnormal_value = #{bo.abnormalValue}</if>
+            <if test="bo.deviationPercent != null">AND t.deviation_percent = #{bo.deviationPercent}</if>
+            <if test="bo.monitorStatus != null and bo.monitorStatus != ''">AND t.monitor_status = #{bo.monitorStatus}</if>
+            <if test="bo.eventTime != null">AND t.event_time = #{bo.eventTime}</if>
+            <if test="bo.execId != null and bo.execId != ''">AND t.exec_id = #{bo.execId}</if>
+        </where>
+        ORDER BY t.id ASC
+    </sql>
+
+    <!-- 联表分页查询异物检测事件列表（附带线路名称、车站名称） -->
+    <select id="selectVoPageWithRef" resultType="org.dromara.model.domain.vo.ModelAnomalyEventVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_anomaly_event t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        <include refid="anomalyRefWhere"/>
+    </select>
+
+    <!-- 联表查询异物检测事件列表（附带线路名称、车站名称） -->
+    <select id="selectVoListWithRef" resultType="org.dromara.model.domain.vo.ModelAnomalyEventVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_anomaly_event t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        <include refid="anomalyRefWhere"/>
+    </select>
+
+    <!-- 联表查询异物检测事件详情（附带线路名称、车站名称） -->
+    <select id="selectVoByIdWithRef" resultType="org.dromara.model.domain.vo.ModelAnomalyEventVo">
+        SELECT t.*, l.name AS line_name, s.name AS station_name
+        FROM model_anomaly_event t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        LEFT JOIN metro_station s ON t.station_id = s.id
+        WHERE t.id = #{id}
+    </select>
+
 </mapper>

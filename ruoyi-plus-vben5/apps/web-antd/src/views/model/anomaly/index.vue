@@ -8,6 +8,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
+import { lineList, stationList } from '#/api/model';
 import {
   PlatformButton,
   PlatformEchartsPanel,
@@ -48,10 +49,8 @@ function currentClock() {
   return new Date().toLocaleTimeString('zh-CN', { hour12: false });
 }
 
-const lineOptions = computed(() => getAnomalyLineOptions());
-const stationOptions = computed(() =>
-  getAnomalyStationOptions(filter.value.line),
-);
+const lineOptions = ref<{ label: string; value: string }[]>([]);
+const stationOptions = ref<{ label: string; value: string }[]>([]);
 const deviceOptions = computed(() =>
   getAnomalyDeviceOptions({
     line: filter.value.line,
@@ -60,11 +59,65 @@ const deviceOptions = computed(() =>
   }),
 );
 
+/** 线路名称 → 线路ID，用于按所选线路过滤车站 */
+const lineIdByName = new Map<string, string | number>();
+
+/**
+ * 线路 / 车站下拉由 metro_line、metro_station 真实配置数据提供；
+ * 配置表为空或接口异常时回退到本地示例数据，保证页面可用。
+ */
+async function loadLineOptions() {
+  try {
+    const res = await lineList({ pageNum: 1, pageSize: 500 });
+    const list = res.rows ?? [];
+
+    if (list.length > 0) {
+      lineIdByName.clear();
+      list.forEach((line) => lineIdByName.set(line.name, line.id));
+      lineOptions.value = list.map((line) => ({
+        label: line.name,
+        value: line.name,
+      }));
+      return;
+    }
+  } catch {
+    // 接口异常时回退示例数据
+  }
+  lineOptions.value = getAnomalyLineOptions();
+}
+
+async function loadStationOptions(lineName: string) {
+  try {
+    const lineId = lineName ? lineIdByName.get(lineName) : undefined;
+    const res = await stationList({
+      pageNum: 1,
+      pageSize: 1000,
+      ...(lineId ? { lineId } : {}),
+    });
+    const list = res.rows ?? [];
+
+    if (list.length > 0) {
+      return list.map((station) => ({
+        label: station.name,
+        value: station.name,
+      }));
+    }
+  } catch {
+    // 接口异常时回退示例数据
+  }
+  return getAnomalyStationOptions(lineName);
+}
+
+async function refreshStationOptions(lineName: string) {
+  stationOptions.value = await loadStationOptions(lineName);
+}
+
 watch(
   () => filter.value.line,
-  () => {
+  (line) => {
     filter.value.station = '';
     filter.value.device = '';
+    void refreshStationOptions(line);
   },
 );
 watch(
@@ -98,6 +151,7 @@ let refreshTimer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
   refreshedAt.value = currentClock();
   refreshTimer = setInterval(handleRefresh, refreshInterval * 1000);
+  void loadLineOptions().then(() => refreshStationOptions(''));
 });
 
 onUnmounted(() => {
@@ -210,9 +264,22 @@ const allEventsOpen = ref(false);
 const allFilter = ref({ deviceName: '', line: '', station: '' });
 const allDateRange = ref<string[]>([]);
 
-const allStationOptions = computed(() =>
-  getAnomalyStationOptions(allFilter.value.line),
-);
+const allStationOptions = ref<{ label: string; value: string }[]>([]);
+
+async function refreshAllStationOptions(lineName: string) {
+  allStationOptions.value = await loadStationOptions(lineName);
+}
+
+function handleAllLineChange() {
+  allFilter.value.station = '';
+  void refreshAllStationOptions(allFilter.value.line);
+}
+
+watch(allEventsOpen, (open) => {
+  if (open) {
+    void refreshAllStationOptions(allFilter.value.line);
+  }
+});
 
 const allEventsRaw = computed(() =>
   getAnomalyAllEvents({
@@ -249,6 +316,7 @@ const allEvents = computed(() => {
 function handleAllReset() {
   allFilter.value = { deviceName: '', line: '', station: '' };
   allDateRange.value = [];
+  void refreshAllStationOptions('');
 }
 </script>
 
@@ -390,7 +458,7 @@ function handleAllReset() {
             :options="lineOptions"
             allow-clear
             placeholder="线路"
-            @change="allFilter.station = ''"
+            @change="handleAllLineChange"
           />
           <PlatformSelect
             v-model:value="allFilter.station"

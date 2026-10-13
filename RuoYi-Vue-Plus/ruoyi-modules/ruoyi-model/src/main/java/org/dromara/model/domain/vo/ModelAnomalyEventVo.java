@@ -37,9 +37,9 @@ public class ModelAnomalyEventVo implements Serializable {
     private String id;
 
     /**
-     * 设备ID，逻辑关联model_device.id
+     * 设备ID，逻辑关联metro_device.id
      */
-    @ExcelProperty(value = "设备ID，逻辑关联model_device.id")
+    @ExcelProperty(value = "设备ID，逻辑关联metro_device.id")
     private String deviceId;
 
     /**
@@ -68,6 +68,18 @@ public class ModelAnomalyEventVo implements Serializable {
     @ExcelProperty(value = "车站ID，逻辑关联metro_station.id", converter = ExcelDictConvert.class)
     @ExcelDictFormat(readConverterExp = "冗=余")
     private String stationId;
+
+    /**
+     * 线路名称（联表 metro_line.name）
+     */
+    @ExcelProperty(value = "线路名称")
+    private String lineName;
+
+    /**
+     * 车站名称（联表 metro_station.name）
+     */
+    @ExcelProperty(value = "车站名称")
+    private String stationName;
 
     /**
      * 检测参数名（如电流/电压）

@@ -1,7 +1,9 @@
 package org.dromara.model.service;
 
 import org.dromara.model.domain.vo.ModelComparisonRecordVo;
+import org.dromara.model.domain.vo.ModelComparisonExecuteVo;
 import org.dromara.model.domain.bo.ModelComparisonRecordBo;
+import org.dromara.model.domain.bo.ModelComparisonExecuteBo;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
 
@@ -65,4 +67,12 @@ public interface IModelComparisonRecordService {
      * @return 是否删除成功
      */
     Boolean deleteWithValidByIds(Collection<String> ids, Boolean isValid);
+
+    /**
+     * 执行数据比对：取各模型对同一批设备的历史结果，落库并返回比对矩阵
+     *
+     * @param bo 比对执行参数（设备品种、设备列表、模型列表）
+     * @return 比对结果（模型、设备、评分明细与一致性摘要）
+     */
+    ModelComparisonExecuteVo execute(ModelComparisonExecuteBo bo);
 }

@@ -34,7 +34,8 @@ export const overridesPreferences = defineOverridesPreferences({
      * 然后路由会进行合并
      */
     accessMode: 'mixed',
-    defaultHomePath: '/workbench/index',
+    // 登录后默认进入「模型概览」，取代原来的工作台 /workbench/index
+    defaultHomePath: '/model/overview',
     authPageLayout: 'panel-center',
     /**
      * 不需要refresh token 由后端处理

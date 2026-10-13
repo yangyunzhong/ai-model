@@ -43,4 +43,9 @@ public class ModelRunOnceBo implements Serializable {
      */
     private String triggerType;
 
+    /**
+     * 关联模型任务ID（定时/立即执行场景下回写执行记录用，可为空）
+     */
+    private String taskId;
+
 }

@@ -66,4 +66,10 @@ public class ModelCatalogVo implements Serializable {
      */
     @ExcelProperty(value = "创建时间")
     private Date createTime;
+
+    /**
+     * 该类别下的模型数量（统计字段，非数据库列）
+     */
+    @ExcelProperty(value = "模型数量")
+    private Long modelCount;
 }

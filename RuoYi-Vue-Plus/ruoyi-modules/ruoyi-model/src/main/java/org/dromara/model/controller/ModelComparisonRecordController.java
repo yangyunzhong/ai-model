@@ -18,7 +18,9 @@ import org.dromara.common.core.validate.EditGroup;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.excel.utils.ExcelUtil;
 import org.dromara.model.domain.vo.ModelComparisonRecordVo;
+import org.dromara.model.domain.vo.ModelComparisonExecuteVo;
 import org.dromara.model.domain.bo.ModelComparisonRecordBo;
+import org.dromara.model.domain.bo.ModelComparisonExecuteBo;
 import org.dromara.model.service.IModelComparisonRecordService;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 
@@ -101,5 +103,18 @@ public class ModelComparisonRecordController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable String[] ids) {
         return toAjax(modelComparisonRecordService.deleteWithValidByIds(List.of(ids), true));
+    }
+
+    /**
+     * 执行数据比对
+     *
+     * <p>取所选模型对同一批设备的历史执行结果进行横向比对，落库并返回比对矩阵。</p>
+     */
+    @SaCheckPermission("model:comparisonRecord:add")
+    @Log(title = "数据比对", businessType = BusinessType.INSERT)
+    @RepeatSubmit()
+    @PostMapping("/execute")
+    public R<ModelComparisonExecuteVo> execute(@RequestBody ModelComparisonExecuteBo bo) {
+        return R.ok(modelComparisonRecordService.execute(bo));
     }
 }

@@ -128,7 +128,7 @@ onMounted(loadList);
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'modelCount'">
-              <span class="model-category-empty">—</span>
+              <span class="model-category-count">{{ (record as CatalogVO).modelCount ?? 0 }}</span>
             </template>
             <template v-else-if="column.key === 'status'">
               <PlatformStatusTag
@@ -181,7 +181,8 @@ onMounted(loadList);
   padding: var(--st-module-content-padding);
 }
 
-.model-category-empty {
-  color: var(--ant-color-text-quaternary, rgb(0 0 0 / 25%));
+.model-category-count {
+  font-weight: 600;
+  color: hsl(var(--foreground));
 }
 </style>

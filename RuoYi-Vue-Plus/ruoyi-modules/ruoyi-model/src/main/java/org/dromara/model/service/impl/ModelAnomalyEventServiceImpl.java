@@ -1,12 +1,9 @@
 package org.dromara.model.service.impl;
 
 import org.dromara.common.core.utils.MapstructUtils;
-import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
 import org.dromara.common.mybatis.core.page.PageQuery;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,7 +14,6 @@ import org.dromara.model.mapper.ModelAnomalyEventMapper;
 import org.dromara.model.service.IModelAnomalyEventService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Collection;
 
 /**
@@ -41,7 +37,7 @@ public class ModelAnomalyEventServiceImpl implements IModelAnomalyEventService {
      */
     @Override
     public ModelAnomalyEventVo queryById(String id){
-        return baseMapper.selectVoById(id);
+        return baseMapper.selectVoByIdWithRef(id);
     }
 
     /**
@@ -53,8 +49,7 @@ public class ModelAnomalyEventServiceImpl implements IModelAnomalyEventService {
      */
     @Override
     public TableDataInfo<ModelAnomalyEventVo> queryPageList(ModelAnomalyEventBo bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<ModelAnomalyEvent> lqw = buildQueryWrapper(bo);
-        Page<ModelAnomalyEventVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        Page<ModelAnomalyEventVo> result = baseMapper.selectVoPageWithRef(pageQuery.build(), bo);
         return TableDataInfo.build(result);
     }
 
@@ -66,28 +61,7 @@ public class ModelAnomalyEventServiceImpl implements IModelAnomalyEventService {
      */
     @Override
     public List<ModelAnomalyEventVo> queryList(ModelAnomalyEventBo bo) {
-        LambdaQueryWrapper<ModelAnomalyEvent> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
-    }
-
-    private LambdaQueryWrapper<ModelAnomalyEvent> buildQueryWrapper(ModelAnomalyEventBo bo) {
-        Map<String, Object> params = bo.getParams();
-        LambdaQueryWrapper<ModelAnomalyEvent> lqw = Wrappers.lambdaQuery();
-        lqw.orderByAsc(ModelAnomalyEvent::getId);
-        lqw.eq(StringUtils.isNotBlank(bo.getDeviceId()), ModelAnomalyEvent::getDeviceId, bo.getDeviceId());
-        lqw.like(StringUtils.isNotBlank(bo.getDeviceName()), ModelAnomalyEvent::getDeviceName, bo.getDeviceName());
-        lqw.eq(StringUtils.isNotBlank(bo.getDeviceType()), ModelAnomalyEvent::getDeviceType, bo.getDeviceType());
-        lqw.eq(StringUtils.isNotBlank(bo.getLineId()), ModelAnomalyEvent::getLineId, bo.getLineId());
-        lqw.eq(StringUtils.isNotBlank(bo.getStationId()), ModelAnomalyEvent::getStationId, bo.getStationId());
-        lqw.like(StringUtils.isNotBlank(bo.getParamName()), ModelAnomalyEvent::getParamName, bo.getParamName());
-        lqw.eq(StringUtils.isNotBlank(bo.getUnit()), ModelAnomalyEvent::getUnit, bo.getUnit());
-        lqw.eq(bo.getNormalValue() != null, ModelAnomalyEvent::getNormalValue, bo.getNormalValue());
-        lqw.eq(bo.getAbnormalValue() != null, ModelAnomalyEvent::getAbnormalValue, bo.getAbnormalValue());
-        lqw.eq(bo.getDeviationPercent() != null, ModelAnomalyEvent::getDeviationPercent, bo.getDeviationPercent());
-        lqw.eq(StringUtils.isNotBlank(bo.getMonitorStatus()), ModelAnomalyEvent::getMonitorStatus, bo.getMonitorStatus());
-        lqw.eq(bo.getEventTime() != null, ModelAnomalyEvent::getEventTime, bo.getEventTime());
-        lqw.eq(StringUtils.isNotBlank(bo.getExecId()), ModelAnomalyEvent::getExecId, bo.getExecId());
-        return lqw;
+        return baseMapper.selectVoListWithRef(bo);
     }
 
     /**

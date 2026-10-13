@@ -46,10 +46,9 @@ import java.util.Collection;
 public class ModelExecLogServiceImpl implements IModelExecLogService {
 
     /**
-     * 默认触发方式与设备状态
+     * 默认触发方式与参数方向
      */
     private static final String DEFAULT_TRIGGER_TYPE = "单次运行";
-    private static final String DEVICE_STATUS_ENABLED = "启用";
     private static final String PARAM_DIRECTION_INPUT = "输入";
     private static final String PARAM_DIRECTION_OUTPUT = "输出";
 
@@ -187,6 +186,7 @@ public class ModelExecLogServiceImpl implements IModelExecLogService {
             .modelId(definition.getId())
             .modelName(definition.getModelName())
             .triggerType(StringUtils.isBlank(bo.getTriggerType()) ? DEFAULT_TRIGGER_TYPE : bo.getTriggerType())
+            .taskId(bo.getTaskId())
             .executorId(currentExecutorId())
             .params(bo.getParams())
             .inputParams(toParamMeta(params, PARAM_DIRECTION_INPUT))
@@ -233,17 +233,25 @@ public class ModelExecLogServiceImpl implements IModelExecLogService {
     }
 
     /**
-     * 解析参与本次执行的设备：优先按显式设备ID，否则取模型适用类型下的启用设备
+     * 解析参与本次执行的设备（取自 metro_device 外部主数据）：优先按显式设备ID，否则取模型适用类型下的全部设备
      */
     private List<ModelExecContext.DeviceInfo> resolveDevices(ModelDefinition definition, List<String> deviceIds) {
-        LambdaQueryWrapper<ModelDevice> lqw = Wrappers.<ModelDevice>lambdaQuery()
-            .eq(ModelDevice::getStatus, DEVICE_STATUS_ENABLED);
+        if (deviceIds == null || deviceIds.isEmpty()) {
+            Integer typeCode = ModelDevice.typeCodeOf(definition.getDeviceType());
+            if (typeCode == null) {
+                // 模型适用品种在 metro_device 中无对应设备类型，视为无可用设备
+                return new ArrayList<>();
+            }
+        }
+        LambdaQueryWrapper<ModelDevice> lqw = Wrappers.<ModelDevice>lambdaQuery();
         if (deviceIds != null && !deviceIds.isEmpty()) {
             lqw.in(ModelDevice::getId, deviceIds);
-        } else if (StringUtils.isNotBlank(definition.getDeviceType())) {
-            lqw.eq(ModelDevice::getDeviceType, definition.getDeviceType());
+        } else {
+            lqw.eq(ModelDevice::getDeviceType, ModelDevice.typeCodeOf(definition.getDeviceType()));
         }
-        lqw.orderByAsc(ModelDevice::getSortOrder);
+        lqw.orderByAsc(ModelDevice::getLineId)
+            .orderByAsc(ModelDevice::getStationId)
+            .orderByAsc(ModelDevice::getId);
         List<ModelDevice> devices = deviceMapper.selectList(lqw);
 
         List<ModelExecContext.DeviceInfo> result = new ArrayList<>(devices.size());
@@ -253,7 +261,7 @@ public class ModelExecLogServiceImpl implements IModelExecLogService {
                 .deviceName(device.getDeviceName())
                 .lineId(device.getLineId())
                 .stationId(device.getStationId())
-                .deviceType(device.getDeviceType())
+                .deviceType(ModelDevice.typeNameOf(device.getDeviceType()))
                 .build());
         }
         return result;

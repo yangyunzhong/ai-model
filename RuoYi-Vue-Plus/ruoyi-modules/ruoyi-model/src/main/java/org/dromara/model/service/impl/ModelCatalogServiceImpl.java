@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.dromara.model.domain.bo.ModelCatalogBo;
 import org.dromara.model.domain.vo.ModelCatalogVo;
 import org.dromara.model.domain.ModelCatalog;
+import org.dromara.model.domain.ModelDefinition;
 import org.dromara.model.mapper.ModelCatalogMapper;
+import org.dromara.model.mapper.ModelDefinitionMapper;
 import org.dromara.model.service.IModelCatalogService;
 
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.Collection;
 public class ModelCatalogServiceImpl implements IModelCatalogService {
 
     private final ModelCatalogMapper baseMapper;
+    private final ModelDefinitionMapper definitionMapper;
 
     /**
      * 查询模型类别
@@ -41,7 +44,11 @@ public class ModelCatalogServiceImpl implements IModelCatalogService {
      */
     @Override
     public ModelCatalogVo queryById(String id){
-        return baseMapper.selectVoById(id);
+        ModelCatalogVo vo = baseMapper.selectVoById(id);
+        if (vo != null) {
+            vo.setModelCount(countModel(vo.getId()));
+        }
+        return vo;
     }
 
     /**
@@ -55,6 +62,7 @@ public class ModelCatalogServiceImpl implements IModelCatalogService {
     public TableDataInfo<ModelCatalogVo> queryPageList(ModelCatalogBo bo, PageQuery pageQuery) {
         LambdaQueryWrapper<ModelCatalog> lqw = buildQueryWrapper(bo);
         Page<ModelCatalogVo> result = baseMapper.selectVoPage(pageQuery.build(), lqw);
+        fillModelCount(result.getRecords());
         return TableDataInfo.build(result);
     }
 
@@ -67,7 +75,37 @@ public class ModelCatalogServiceImpl implements IModelCatalogService {
     @Override
     public List<ModelCatalogVo> queryList(ModelCatalogBo bo) {
         LambdaQueryWrapper<ModelCatalog> lqw = buildQueryWrapper(bo);
-        return baseMapper.selectVoList(lqw);
+        List<ModelCatalogVo> list = baseMapper.selectVoList(lqw);
+        fillModelCount(list);
+        return list;
+    }
+
+    /**
+     * 统计某类别下的模型数量
+     *
+     * @param catalogId 类别ID
+     * @return 模型数量
+     */
+    private Long countModel(String catalogId) {
+        if (StringUtils.isBlank(catalogId)) {
+            return 0L;
+        }
+        return definitionMapper.selectCount(Wrappers.<ModelDefinition>lambdaQuery()
+            .eq(ModelDefinition::getCatalogId, catalogId));
+    }
+
+    /**
+     * 批量填充类别下的模型数量
+     *
+     * @param list 类别列表
+     */
+    private void fillModelCount(List<ModelCatalogVo> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        for (ModelCatalogVo vo : list) {
+            vo.setModelCount(countModel(vo.getId()));
+        }
     }
 
     private LambdaQueryWrapper<ModelCatalog> buildQueryWrapper(ModelCatalogBo bo) {

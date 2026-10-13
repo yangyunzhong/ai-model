@@ -39,9 +39,9 @@ public class ModelResultBo extends BaseEntity {
     private String modelId;
 
     /**
-     * 设备ID，逻辑关联model_device.id
+     * 设备ID，逻辑关联metro_device.id
      */
-    @NotBlank(message = "设备ID，逻辑关联model_device.id不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "设备ID，逻辑关联metro_device.id不能为空", groups = { AddGroup.class, EditGroup.class })
     private String deviceId;
 
     /**

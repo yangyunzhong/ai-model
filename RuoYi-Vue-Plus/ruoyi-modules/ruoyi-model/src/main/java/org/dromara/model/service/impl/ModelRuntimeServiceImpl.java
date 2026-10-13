@@ -8,8 +8,10 @@ import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.oss.factory.OssFactory;
 import org.dromara.common.tenant.helper.TenantHelper;
 import org.dromara.model.domain.ModelDefinition;
+import org.dromara.model.domain.ModelResult;
 import org.dromara.model.domain.ModelScript;
 import org.dromara.model.mapper.ModelDefinitionMapper;
+import org.dromara.model.mapper.ModelResultMapper;
 import org.dromara.model.mapper.ModelScriptMapper;
 import org.dromara.model.runtime.ModelContainerManager;
 import org.dromara.model.runtime.RuntimeProperties;
@@ -64,6 +66,7 @@ public class ModelRuntimeServiceImpl implements IModelRuntimeService {
 
     private final ModelDefinitionMapper definitionMapper;
     private final ModelScriptMapper scriptMapper;
+    private final ModelResultMapper resultMapper;
     private final RuntimeProperties properties;
     private final RuntimeScriptStore scriptStore;
     private final ModelContainerManager containerManager;
@@ -183,7 +186,12 @@ public class ModelRuntimeServiceImpl implements IModelRuntimeService {
             deleteOssObject(script.getRequirementsOssId());
             scriptMapper.deleteById(script.getId());
         }
-        log.info("模型运行时物料已清理, modelId => {}, scriptCount => {}", modelId, scripts.size());
+
+        // 4) 清理该模型的历史计算结果（model_result）
+        int resultCount = resultMapper.delete(Wrappers.<ModelResult>lambdaQuery()
+            .eq(ModelResult::getModelId, modelId));
+        log.info("模型运行时物料已清理, modelId => {}, scriptCount => {}, resultCount => {}",
+            modelId, scripts.size(), resultCount);
     }
 
     /**

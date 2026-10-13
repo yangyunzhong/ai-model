@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.dromara.model.mapper.MetroStationMapper">
+
+    <!-- 车站查询公共条件 -->
+    <sql id="stationRefWhere">
+        <where>
+            <if test="bo.id != null and bo.id != ''">AND t.id = #{bo.id}</if>
+            <if test="bo.lineId != null and bo.lineId != ''">AND t.line_id = #{bo.lineId}</if>
+            <if test="bo.name != null and bo.name != ''">AND t.name LIKE CONCAT('%', #{bo.name}, '%')</if>
+            <if test="bo.code != null and bo.code != ''">AND t.code = #{bo.code}</if>
+            <if test="bo.stationNo != null">AND t.station_no = #{bo.stationNo}</if>
+            <if test="bo.stationType != null and bo.stationType != ''">AND t.station_type = #{bo.stationType}</if>
+            <if test="bo.isChange != null and bo.isChange != ''">AND t.is_change = #{bo.isChange}</if>
+            <if test="bo.districtCode != null and bo.districtCode != ''">AND t.district_code = #{bo.districtCode}</if>
+            <if test="bo.streetCode != null and bo.streetCode != ''">AND t.street_code = #{bo.streetCode}</if>
+            <if test="bo.sortOrder != null">AND t.sort_order = #{bo.sortOrder}</if>
+        </where>
+        ORDER BY t.sort_order ASC, t.station_no ASC, t.id ASC
+    </sql>
+
+    <!-- 联表分页查询车站列表（附带线路名称） -->
+    <select id="selectVoPageWithRef" resultType="org.dromara.model.domain.vo.MetroStationVo">
+        SELECT t.*, l.name AS line_name
+        FROM metro_station t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        <include refid="stationRefWhere"/>
+    </select>
+
+    <!-- 联表查询车站列表（附带线路名称） -->
+    <select id="selectVoListWithRef" resultType="org.dromara.model.domain.vo.MetroStationVo">
+        SELECT t.*, l.name AS line_name
+        FROM metro_station t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        <include refid="stationRefWhere"/>
+    </select>
+
+    <!-- 联表查询车站详情（附带线路名称） -->
+    <select id="selectVoByIdWithRef" resultType="org.dromara.model.domain.vo.MetroStationVo">
+        SELECT t.*, l.name AS line_name
+        FROM metro_station t
+        LEFT JOIN metro_line l ON t.line_id = l.id
+        WHERE t.id = #{id}
+    </select>
+
+</mapper>

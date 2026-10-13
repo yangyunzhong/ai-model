@@ -5,7 +5,6 @@ import type {
   CatalogVO,
   DefinitionVO,
   ExecLogVO,
-  TaskForm,
   TaskVO,
 } from '#/api/model/model';
 
@@ -35,12 +34,11 @@ import {
   definitionRemove,
   execLogList,
   taskList,
-  taskUpdate,
+  taskToggleStatus,
 } from '#/api/model';
 
 import ModelDetailDrawer from './modal/model-detail-drawer.vue';
 import ModelRegisterModal from './modal/model-register-modal.vue';
-import ModelResultDrawer from './modal/model-result-drawer.vue';
 import ModelRunModal from './modal/model-run-modal.vue';
 
 const route = useRoute();
@@ -225,20 +223,6 @@ watch(
 );
 
 // ==================== 请求载荷组装 ====================
-function toTaskForm(task: TaskVO, patch: Partial<TaskForm> = {}): TaskForm {
-  return {
-    id: task.id,
-    modelId: task.modelId,
-    taskName: task.taskName,
-    cronExpression: task.cronExpression,
-    cronDescription: task.cronDescription,
-    status: task.status,
-    lastExecuteTime: task.lastExecuteTime,
-    nextExecuteTime: task.nextExecuteTime,
-    remark: task.remark,
-    ...patch,
-  };
-}
 
 // ==================== 注册 / 编辑模型弹窗 ====================
 const registerModalRef = ref<InstanceType<typeof ModelRegisterModal>>();
@@ -264,7 +248,7 @@ async function handleOffline(model: DefinitionVO) {
   await definitionOffline(model.id);
   const task = taskMap.value[String(model.id)];
   if (task && task.status === '运行中') {
-    await taskUpdate(toTaskForm(task, { status: '暂停' }));
+    await taskToggleStatus(task.id);
   }
   await loadList();
 }
@@ -283,8 +267,7 @@ async function handleToggleEnabled(model: DefinitionVO) {
     window.message.warning('该模型暂未配置自动任务，请先在模型任务中配置');
     return;
   }
-  const nextStatus = task.status === '运行中' ? '暂停' : '运行中';
-  await taskUpdate(toTaskForm(task, { status: nextStatus }));
+  await taskToggleStatus(task.id);
   await loadList();
 }
 
@@ -300,13 +283,6 @@ const detailDrawerRef = ref<InstanceType<typeof ModelDetailDrawer>>();
 
 function openDetail(model: DefinitionVO) {
   detailDrawerRef.value?.open(model);
-}
-
-// ==================== 查看结果抽屉 ====================
-const resultDrawerRef = ref<InstanceType<typeof ModelResultDrawer>>();
-
-function openResult(model: DefinitionVO) {
-  resultDrawerRef.value?.open(model);
 }
 
 onMounted(() => {
@@ -490,14 +466,6 @@ onMounted(() => {
                       下架
                     </PlatformButton>
                   </Popconfirm>
-                  <PlatformButton
-                    scene="action"
-                    size="small"
-                    type="link"
-                    @click="openResult(record as DefinitionVO)"
-                  >
-                    查看结果
-                  </PlatformButton>
                 </template>
 
                 <template v-else>
@@ -534,9 +502,6 @@ onMounted(() => {
 
     <!-- 模型详情 -->
     <ModelDetailDrawer ref="detailDrawerRef" />
-
-    <!-- 查看结果 -->
-    <ModelResultDrawer ref="resultDrawerRef" />
   </Page>
 </template>
 

@@ -41,15 +41,19 @@ public class ModelTaskBo extends BaseEntity {
     private String taskName;
 
     /**
-     * cron表达式（如 0 2 * * *）
+     * cron表达式（如 0 2 * * *），周期调度必填，一次性调度留空
      */
-    @NotBlank(message = "cron表达式（如 0 2 * * *）不能为空", groups = { AddGroup.class, EditGroup.class })
     private String cronExpression;
 
     /**
      * cron描述（如“每日 02:00”）
      */
     private String cronDescription;
+
+    /**
+     * 调度类型：cron=周期调度，once=一次性指定时间
+     */
+    private String scheduleType;
 
     /**
      * 任务状态

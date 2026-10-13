@@ -17,6 +17,7 @@ import org.dromara.model.domain.ModelDefinition;
 import org.dromara.model.mapper.ModelDefinitionMapper;
 import org.dromara.model.service.IModelDefinitionService;
 import org.dromara.model.service.IModelRuntimeService;
+import org.dromara.model.service.IModelTaskService;
 
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,8 @@ public class ModelDefinitionServiceImpl implements IModelDefinitionService {
     private final ModelDefinitionMapper baseMapper;
 
     private final IModelRuntimeService modelRuntimeService;
+
+    private final IModelTaskService modelTaskService;
 
     /**
      * 查询模型定义
@@ -93,16 +96,21 @@ public class ModelDefinitionServiceImpl implements IModelDefinitionService {
     /**
      * 新增模型定义
      *
+     * <p>模型与初始任务需原子创建：任务创建失败时连同模型一起回滚，避免出现无任务的半成品模型。</p>
+     *
      * @param bo 模型定义
      * @return 是否新增成功
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Boolean insertByBo(ModelDefinitionBo bo) {
         ModelDefinition add = MapstructUtils.convert(bo, ModelDefinition.class);
         validEntityBeforeSave(add);
         boolean flag = baseMapper.insert(add) > 0;
         if (flag) {
             bo.setId(add.getId());
+            // 注册模型后自动创建一条初始任务（仅关联模型，状态默认「暂停」）
+            modelTaskService.createInitialTask(add.getId());
         }
         return flag;
     }

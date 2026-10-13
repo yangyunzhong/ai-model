@@ -38,7 +38,7 @@ public class ModelResult extends BaseEntity {
     private String modelId;
 
     /**
-     * 设备ID，逻辑关联model_device.id
+     * 设备ID，逻辑关联metro_device.id
      */
     private String deviceId;
 

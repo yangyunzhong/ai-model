@@ -2,12 +2,14 @@ import type { CatalogVO, CatalogForm, CatalogQuery } from './model';
 import type { TaskVO, TaskForm, TaskQuery } from './model';
 import type { DefinitionVO, DefinitionForm, DefinitionQuery } from './model';
 import type { ComparisonRecordVO, ComparisonRecordForm, ComparisonRecordQuery } from './model';
+import type { ComparisonExecuteForm, ComparisonExecuteVO } from './model';
 import type { ComparisonDetailVO, ComparisonDetailForm, ComparisonDetailQuery } from './model';
 import type { AnomalyEventVO, AnomalyEventForm, AnomalyEventQuery } from './model';
-import type { DeviceVO, DeviceForm, DeviceQuery } from './model';
+import type { DeviceVO, DeviceQuery } from './model';
 import type { ExecLogVO, ExecLogForm, ExecLogQuery } from './model';
 import type { ExecLogDetailVO, ExecLogDetailForm, ExecLogDetailQuery } from './model';
 import type { LineVO, LineForm, LineQuery } from './model';
+import type { StationVO, StationForm, StationQuery } from './model';
 import type { ParamVO, ParamForm, ParamQuery } from './model';
 import type { ResultVO, ResultForm, ResultQuery } from './model';
 import type { ScriptVO, ScriptForm, ScriptQuery } from './model';
@@ -129,6 +131,24 @@ export function taskRemove(id: ID | IDS) {
 }
 
 /**
+ * 立即执行模型任务（对该品种全部启用设备执行一次）
+ * @param id id
+ * @returns void
+ */
+export function taskRunNow(id: ID) {
+  return alovaInstance.postWithMsg<void>(`/model/task/runNow/${id}`);
+}
+
+/**
+ * 开启 / 暂停模型任务（同步定时调度）
+ * @param id id
+ * @returns void
+ */
+export function taskToggleStatus(id: ID) {
+  return alovaInstance.postWithMsg<void>(`/model/task/toggleStatus/${id}`);
+}
+
+/**
 * 查询模型定义列表
 * @param params
 * @returns 模型定义列表
@@ -184,20 +204,26 @@ export function definitionRemove(id: ID | IDS) {
 
 /**
  * 发布模型定义（按当前脚本创建/启动运行时容器）
+ * 容器创建、依赖安装耗时较长，单独放宽超时，避免全局 10s 超时导致前端误报失败
  * @param id id
  * @returns void
  */
 export function definitionPublish(id: ID) {
-  return alovaInstance.postWithMsg<void>(`/model/definition/publish/${id}`);
+  return alovaInstance.postWithMsg<void>(`/model/definition/publish/${id}`, undefined, {
+    timeout: 180 * 1000,
+  });
 }
 
 /**
  * 下架模型定义（停止并删除运行时容器）
+ * docker stop 优雅等待耗时较长，单独放宽超时，避免全局 10s 超时导致前端误报失败
  * @param id id
  * @returns void
  */
 export function definitionOffline(id: ID) {
-  return alovaInstance.postWithMsg<void>(`/model/definition/offline/${id}`);
+  return alovaInstance.postWithMsg<void>(`/model/definition/offline/${id}`, undefined, {
+    timeout: 120 * 1000,
+  });
 }
 
 /**
@@ -252,6 +278,15 @@ export function comparisonRecordUpdate(data: ComparisonRecordForm) {
  */
 export function comparisonRecordRemove(id: ID | IDS) {
   return alovaInstance.deleteWithMsg<void>(`/model/comparisonRecord/${id}`);
+}
+
+/**
+ * 执行数据比对（取各模型历史结果对同一批设备横向比对）
+ * @param data 比对参数（设备品种、设备列表、模型列表 2-5 个）
+ * @returns 比对矩阵结果
+ */
+export function comparisonRecordExecute(data: ComparisonExecuteForm) {
+  return alovaInstance.post<ComparisonExecuteVO>('/model/comparisonRecord/execute', data);
 }
 
 /**
@@ -382,39 +417,12 @@ export function deviceExport(params?: DeviceQuery) {
 }
 
 /**
- * 查询设备台账主详情
- * @param id id
- * @returns 设备台账主详情
+ * 查询设备详情
+ * @param id 设备编号
+ * @returns 设备详情
  */
 export function deviceInfo(id: ID) {
   return alovaInstance.get<DeviceVO>(`/model/device/${id}`);
-}
-
-/**
- * 新增设备台账主
- * @param data
- * @returns void
- */
-export function deviceAdd(data: DeviceForm) {
-  return alovaInstance.postWithMsg<void>('/model/device', data);
-}
-
-/**
- * 更新设备台账主
- * @param data
- * @returns void
- */
-export function deviceUpdate(data: DeviceForm) {
-  return alovaInstance.putWithMsg<void>('/model/device', data);
-}
-
-/**
- * 删除设备台账主
- * @param id id
- * @returns void
- */
-export function deviceRemove(id: ID | IDS) {
-  return alovaInstance.deleteWithMsg<void>(`/model/device/${id}`);
 }
 
 /**
@@ -591,6 +599,60 @@ export function lineUpdate(data: LineForm) {
  */
 export function lineRemove(id: ID | IDS) {
   return alovaInstance.deleteWithMsg<void>(`/model/line/${id}`);
+}
+
+/**
+* 查询车站信息列表
+* @param params
+* @returns 车站信息列表
+*/
+export function stationList(params?: StationQuery) {
+  return alovaInstance.get<PageResult<StationVO>>('/model/station/list', { params });
+}
+
+/**
+ * 导出车站信息列表
+ * @param params
+ * @returns 车站信息列表
+ */
+export function stationExport(params?: StationQuery) {
+  return commonExport('/model/station/export', params ?? {});
+}
+
+/**
+ * 查询车站信息详情
+ * @param id id
+ * @returns 车站信息详情
+ */
+export function stationInfo(id: ID) {
+  return alovaInstance.get<StationVO>(`/model/station/${id}`);
+}
+
+/**
+ * 新增车站信息
+ * @param data
+ * @returns void
+ */
+export function stationAdd(data: StationForm) {
+  return alovaInstance.postWithMsg<void>('/model/station', data);
+}
+
+/**
+ * 更新车站信息
+ * @param data
+ * @returns void
+ */
+export function stationUpdate(data: StationForm) {
+  return alovaInstance.putWithMsg<void>('/model/station', data);
+}
+
+/**
+ * 删除车站信息
+ * @param id id
+ * @returns void
+ */
+export function stationRemove(id: ID | IDS) {
+  return alovaInstance.deleteWithMsg<void>(`/model/station/${id}`);
 }
 
 /**
