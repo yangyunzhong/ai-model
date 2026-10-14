@@ -5,6 +5,7 @@ import type { ComparisonRecordVO, ComparisonRecordForm, ComparisonRecordQuery } 
 import type { ComparisonExecuteForm, ComparisonExecuteVO } from './model';
 import type { ComparisonDetailVO, ComparisonDetailForm, ComparisonDetailQuery } from './model';
 import type { AnomalyEventVO, AnomalyEventForm, AnomalyEventQuery } from './model';
+import type { AnomalyAnalysisVO } from './model';
 import type { DeviceVO, DeviceQuery } from './model';
 import type { ExecLogVO, ExecLogForm, ExecLogQuery } from './model';
 import type { ExecLogDetailVO, ExecLogDetailForm, ExecLogDetailQuery } from './model';
@@ -396,6 +397,15 @@ export function anomalyEventUpdate(data: AnomalyEventForm) {
  */
 export function anomalyEventRemove(id: ID | IDS) {
   return alovaInstance.deleteWithMsg<void>(`/model/anomalyEvent/${id}`);
+}
+
+/**
+ * 异物检测分析聚合查询（电流/电压趋势曲线、实时监测面板、规则配置、偏差指标）
+ * @param params 查询条件（设备ID/设备类型/线路/车站）
+ * @returns 分析结果
+ */
+export function anomalyAnalysis(params?: AnomalyEventQuery) {
+  return alovaInstance.get<AnomalyAnalysisVO>('/model/anomalyEvent/analysis', { params });
 }
 
 /**

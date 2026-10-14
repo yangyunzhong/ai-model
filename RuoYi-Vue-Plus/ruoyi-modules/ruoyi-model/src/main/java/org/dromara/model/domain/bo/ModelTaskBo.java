@@ -56,9 +56,9 @@ public class ModelTaskBo extends BaseEntity {
     private String scheduleType;
 
     /**
-     * 任务状态
+     * 任务状态（仅新增时必填；配置编辑不改状态，为空时不会覆盖原值）
      */
-    @NotBlank(message = "任务状态不能为空", groups = { AddGroup.class, EditGroup.class })
+    @NotBlank(message = "任务状态不能为空", groups = { AddGroup.class })
     private String status;
 
     /**

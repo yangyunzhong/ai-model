@@ -14,10 +14,12 @@ import { Page } from '@vben/common-ui';
 import {
   PlatformButton,
   PlatformInput,
+  PlatformModal,
   PlatformQueryPanel,
   PlatformSelect,
   PlatformStatusTag,
   PlatformStatCard,
+  PlatformTable,
   PlatformViewToolbar,
 } from '@st/platform-ui';
 
@@ -267,7 +269,7 @@ function openDetail(model: DefinitionVO) {
 
 function goCompare(model: DefinitionVO) {
   router.push({
-    path: '/model-comparison/task',
+    path: '/model/compare',
     query: {
       deviceType: model.deviceType,
       modelId: String(model.id),
@@ -276,14 +278,101 @@ function goCompare(model: DefinitionVO) {
 }
 
 function goResult(model: DefinitionVO) {
-  router.push({
-    path: '/model-manage/list',
-    query: {
-      categoryId: String(model.catalogId),
-      keyword: model.modelName,
-    },
-  });
+  resultModalModel.value = model;
+  resultModalOpen.value = true;
 }
+
+// ==================== 运行结果弹窗 ====================
+const resultModalOpen = ref(false);
+const resultModalModel = ref<DefinitionVO | null>(null);
+
+/** 健康等级展示元数据（对应 model_exec_result.health_level） */
+const levelMetaMap: Record<string, { label: string; status: 'default' | 'error' | 'success' | 'warning' }> = {
+  danger: { label: '高危', status: 'error' },
+  healthy: { label: '健康', status: 'success' },
+  subhealthy: { label: '亚健康', status: 'warning' },
+};
+
+function levelMetaOf(level?: string) {
+  return levelMetaMap[level ?? ''] ?? { label: level ?? '-', status: 'default' as const };
+}
+
+/** 五维展示满分（与列标题 本体/20、工况/25… 对应），原始分为 0-100，按比例折算展示 */
+const DIMENSION_MAX: Record<string, number> = {
+  dimBody: 20,
+  dimCondition: 25,
+  dimEnv: 10,
+  dimFault: 25,
+  dimMaintain: 20,
+};
+
+function dimensionDisplay(row: ResultVO | undefined, field: string) {
+  const raw = row?.[field as keyof ResultVO] as number | undefined;
+  if (raw === undefined || raw === null) {
+    return '-';
+  }
+  const max = DIMENSION_MAX[field] ?? 100;
+  const clamped = Math.max(0, Math.min(100, Number(raw)));
+  return String(Math.round((clamped / 100) * max));
+}
+
+const resultModalTitle = computed(() =>
+  resultModalModel.value ? `「${resultModalModel.value.modelName}」运行结果` : '运行结果',
+);
+
+/** 该模型最近一次执行记录（startTime 最新） */
+const resultModalExec = computed<ExecLogVO | null>(() => {
+  if (!resultModalModel.value) {
+    return null;
+  }
+  let latest: ExecLogVO | null = null;
+  for (const log of execLogs.value) {
+    if (String(log.modelId) !== String(resultModalModel.value.id)) {
+      continue;
+    }
+    if (!latest || toTimestamp(log.startTime) > toTimestamp(latest.startTime)) {
+      latest = log;
+    }
+  }
+  return latest;
+});
+
+/** 最近一次执行产出的设备结果明细（按健康分升序，最差的排前面） */
+const resultModalRows = computed<ResultVO[]>(() => {
+  const exec = resultModalExec.value;
+  if (!resultModalModel.value || !exec) {
+    return [];
+  }
+  const rows = (resultsByModel.value[String(resultModalModel.value.id)] ?? []).filter(
+    (row) => String(row.execId) === String(exec.id),
+  );
+  return [...rows].sort((a, b) => (a.healthScore ?? 100) - (b.healthScore ?? 100));
+});
+
+/** 结果汇总：各健康等级台数 */
+const resultModalSummary = computed(() => {
+  const rows = resultModalRows.value;
+  return {
+    danger: rows.filter((row) => row.healthLevel === 'danger').length,
+    healthy: rows.filter((row) => row.healthLevel === 'healthy').length,
+    sub: rows.filter((row) => row.healthLevel === 'subhealthy').length,
+    total: rows.length,
+  };
+});
+
+/** 结果明细表列定义（六固定字段输出：健康等级/分数 + 五维折算分） */
+const resultColumns = [
+  { dataIndex: 'deviceName', key: 'deviceName', title: '设备名称', width: 150 },
+  { dataIndex: 'lineName', key: 'lineName', title: '线路', width: 80 },
+  { dataIndex: 'stationName', key: 'stationName', title: '车站', width: 80 },
+  { dataIndex: 'healthLevel', key: 'healthLevel', title: '健康等级', width: 96 },
+  { dataIndex: 'healthScore', key: 'healthScore', title: '健康分数', width: 88 },
+  { dataIndex: 'dimBody', key: 'dimBody', title: '本体/20', width: 80 },
+  { dataIndex: 'dimCondition', key: 'dimCondition', title: '工况/25', width: 84 },
+  { dataIndex: 'dimFault', key: 'dimFault', title: '故障/25', width: 84 },
+  { dataIndex: 'dimMaintain', key: 'dimMaintain', title: '维保/20', width: 80 },
+  { dataIndex: 'dimEnv', key: 'dimEnv', title: '环境/10', width: 80 },
+];
 
 function clearDeviceFilter() {
   deviceFilterIds.value = [];
@@ -443,6 +532,56 @@ onMounted(() => {
       </section>
     </div>
 
+    <!-- 运行结果弹窗 -->
+    <PlatformModal
+      v-model:open="resultModalOpen"
+      :footer="null"
+      destroy-on-close
+      :title="resultModalTitle"
+      width="1020px"
+    >
+      <div v-if="resultModalExec" class="model-result-modal__meta">
+        <span>
+          最近运行：<strong>{{ resultModalExec.startTime || '-' }}</strong>
+        </span>
+        <PlatformStatusTag
+          :label="execMetaOf(resultModalExec.status).label"
+          :status="execMetaOf(resultModalExec.status).status"
+          variant="dot"
+        />
+        <span>
+          共 {{ resultModalSummary.total }} 台设备：健康 {{ resultModalSummary.healthy }} /
+          亚健康 {{ resultModalSummary.sub }} / 高危 {{ resultModalSummary.danger }}
+        </span>
+      </div>
+      <PlatformTable
+        :columns="resultColumns"
+        :data-source="resultModalRows"
+        :pagination="{ pageSize: 10, showSizeChanger: false }"
+        row-key="id"
+        size="small"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'healthLevel'">
+            <PlatformStatusTag
+              :label="levelMetaOf((record as ResultVO).healthLevel).label"
+              :status="levelMetaOf((record as ResultVO).healthLevel).status"
+              variant="dot"
+            />
+          </template>
+          <template v-else-if="column.key === 'healthScore'">
+            {{ (record as ResultVO).healthScore ?? '-' }}
+          </template>
+          <template v-else-if="String(column.key).startsWith('dim')">
+            {{ dimensionDisplay(record as ResultVO, String(column.key)) }}
+          </template>
+        </template>
+      </PlatformTable>
+      <div v-if="resultModalExec && resultModalRows.length === 0" class="model-result-modal__empty">
+        该次运行没有产出设备结果
+      </div>
+    </PlatformModal>
+
     <!-- 模型详情 -->
     <ModelDetailDrawer ref="detailDrawerRef" />
   </Page>
@@ -454,6 +593,27 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--st-layout-section-gap);
   min-height: 100%;
+}
+
+.model-result-modal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+}
+
+.model-result-modal__meta strong {
+  color: hsl(var(--foreground));
+}
+
+.model-result-modal__empty {
+  padding: 32px 0;
+  color: hsl(var(--muted-foreground));
+  font-size: 13px;
+  text-align: center;
 }
 
 .model-overview-stat-grid {

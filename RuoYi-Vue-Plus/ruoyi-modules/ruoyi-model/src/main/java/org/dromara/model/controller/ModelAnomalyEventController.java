@@ -17,6 +17,7 @@ import org.dromara.common.core.validate.AddGroup;
 import org.dromara.common.core.validate.EditGroup;
 import org.dromara.common.log.enums.BusinessType;
 import org.dromara.common.excel.utils.ExcelUtil;
+import org.dromara.model.domain.vo.ModelAnomalyAnalysisVo;
 import org.dromara.model.domain.vo.ModelAnomalyEventVo;
 import org.dromara.model.domain.bo.ModelAnomalyEventBo;
 import org.dromara.model.service.IModelAnomalyEventService;
@@ -54,6 +55,15 @@ public class ModelAnomalyEventController extends BaseController {
     public void export(ModelAnomalyEventBo bo, HttpServletResponse response) {
         List<ModelAnomalyEventVo> list = modelAnomalyEventService.queryList(bo);
         ExcelUtil.exportExcel(list, "异物检测事件", ModelAnomalyEventVo.class, response);
+    }
+
+    /**
+     * 异物检测分析聚合查询（趋势曲线/实时监测面板/规则配置/偏差指标）
+     */
+    @SaCheckPermission("model:anomalyEvent:list")
+    @GetMapping("/analysis")
+    public R<ModelAnomalyAnalysisVo> analysis(ModelAnomalyEventBo bo) {
+        return R.ok(modelAnomalyEventService.analysis(bo));
     }
 
     /**

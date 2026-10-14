@@ -2,13 +2,23 @@
 import type { TableProps } from 'antdv-next';
 import type { EChartsOption } from 'echarts';
 
+import type {
+  AnomalyAnalysisForeignRule,
+  AnomalyEventVO,
+} from '#/api/model/model';
 import type { AnomalyFilter } from '../data';
 
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
-import { lineList, stationList } from '#/api/model';
+import {
+  anomalyAnalysis,
+  anomalyEventList,
+  deviceList,
+  lineList,
+  stationList,
+} from '#/api/model';
 import {
   PlatformButton,
   PlatformEchartsPanel,
@@ -24,15 +34,7 @@ import {
 } from '@st/platform-ui';
 import { Empty } from 'antdv-next';
 
-import {
-  anomalyDeviceTypeOptions,
-  anomalyStatusMeta,
-  getAnomalyAllEvents,
-  getAnomalyAnalysis,
-  getAnomalyDeviceOptions,
-  getAnomalyLineOptions,
-  getAnomalyStationOptions,
-} from '../data';
+import { anomalyDeviceTypeOptions } from '../data';
 
 const refreshInterval = 30;
 
@@ -42,116 +44,245 @@ const filter = ref<AnomalyFilter>({
   station: '',
   type: '',
 });
-const tick = ref(0);
 const refreshedAt = ref('');
 
 function currentClock() {
   return new Date().toLocaleTimeString('zh-CN', { hour12: false });
 }
 
+// ==================== 线路 / 车站 / 设备下拉 ====================
 const lineOptions = ref<{ label: string; value: string }[]>([]);
 const stationOptions = ref<{ label: string; value: string }[]>([]);
-const deviceOptions = computed(() =>
-  getAnomalyDeviceOptions({
-    line: filter.value.line,
-    station: filter.value.station,
-    type: filter.value.type,
-  }),
-);
-
-/** 线路名称 → 线路ID，用于按所选线路过滤车站 */
-const lineIdByName = new Map<string, string | number>();
+const deviceOptions = ref<{ label: string; value: string }[]>([]);
 
 /**
- * 线路 / 车站下拉由 metro_line、metro_station 真实配置数据提供；
- * 配置表为空或接口异常时回退到本地示例数据，保证页面可用。
+ * 线路下拉由 metro_line 真实配置数据提供，下拉值存线路ID，
+ * 用于联动车站与后端按线路过滤查询。
  */
 async function loadLineOptions() {
   try {
     const res = await lineList({ pageNum: 1, pageSize: 500 });
-    const list = res.rows ?? [];
-
-    if (list.length > 0) {
-      lineIdByName.clear();
-      list.forEach((line) => lineIdByName.set(line.name, line.id));
-      lineOptions.value = list.map((line) => ({
-        label: line.name,
-        value: line.name,
-      }));
-      return;
-    }
+    lineOptions.value = (res.rows ?? []).map((line) => ({
+      label: line.name,
+      value: String(line.id),
+    }));
   } catch {
-    // 接口异常时回退示例数据
+    lineOptions.value = [];
   }
-  lineOptions.value = getAnomalyLineOptions();
 }
 
-async function loadStationOptions(lineName: string) {
+async function loadStationOptions(lineId: string) {
   try {
-    const lineId = lineName ? lineIdByName.get(lineName) : undefined;
     const res = await stationList({
       pageNum: 1,
       pageSize: 1000,
       ...(lineId ? { lineId } : {}),
     });
-    const list = res.rows ?? [];
-
-    if (list.length > 0) {
-      return list.map((station) => ({
-        label: station.name,
-        value: station.name,
-      }));
-    }
+    return (res.rows ?? []).map((station) => ({
+      label: station.name,
+      value: String(station.id),
+    }));
   } catch {
-    // 接口异常时回退示例数据
+    return [];
   }
-  return getAnomalyStationOptions(lineName);
 }
 
-async function refreshStationOptions(lineName: string) {
-  stationOptions.value = await loadStationOptions(lineName);
+async function refreshStationOptions(lineId: string) {
+  stationOptions.value = await loadStationOptions(lineId);
+}
+
+let deviceOptionsSeq = 0;
+
+/** 设备下拉由 metro_device 真实台账数据提供，按线路/车站/品种过滤 */
+async function loadDeviceOptions() {
+  const requestId = ++deviceOptionsSeq;
+  try {
+    const res = await deviceList({
+      deviceType: filter.value.type || undefined,
+      lineId: filter.value.line || undefined,
+      pageNum: 1,
+      pageSize: 500,
+      stationId: filter.value.station || undefined,
+    });
+    if (requestId !== deviceOptionsSeq) return;
+    deviceOptions.value = (res.rows ?? []).map((device) => ({
+      label: `${device.deviceName}（${device.id}）`,
+      value: String(device.id),
+    }));
+  } catch {
+    if (requestId === deviceOptionsSeq) {
+      deviceOptions.value = [];
+    }
+  }
 }
 
 watch(
   () => filter.value.line,
-  (line) => {
+  (lineId) => {
     filter.value.station = '';
     filter.value.device = '';
-    void refreshStationOptions(line);
+    void refreshStationOptions(lineId);
+    void loadAnalysisAndEvents();
   },
 );
 watch(
   () => filter.value.station,
   () => {
     filter.value.device = '';
+    void loadAnalysisAndEvents();
   },
 );
 watch(
   () => filter.value.type,
   () => {
     filter.value.device = '';
+    void loadAnalysisAndEvents();
   },
 );
+watch(
+  () => filter.value.device,
+  () => void loadAnalysisAndEvents(),
+);
 
-const analysis = computed(() => getAnomalyAnalysis(filter.value, tick.value));
+// ==================== 分析数据（趋势/监测面板/规则） ====================
+interface AnalysisState {
+  anomalyIndex: number;
+  anomalyPercent: number;
+  chartLabel: string;
+  monitorParams: {
+    name: string;
+    range: string;
+    status: string;
+    value: string;
+  }[];
+  rules: AnomalyAnalysisForeignRule[];
+  trend: { current: number; time: string }[];
+}
+
+type MonitorStatus = '关注' | '异常' | '正常';
+
+const monitorStatusMeta: Record<
+  MonitorStatus,
+  { label: MonitorStatus; status: 'error' | 'success' | 'warning' }
+> = {
+  关注: { label: '关注', status: 'warning' },
+  异常: { label: '异常', status: 'error' },
+  正常: { label: '正常', status: 'success' },
+};
+
+function statusMeta(status?: string) {
+  if (status === '关注' || status === '异常') {
+    return monitorStatusMeta[status];
+  }
+  return monitorStatusMeta['正常'];
+}
+
+const analysis = ref<AnalysisState>({
+  anomalyIndex: 0,
+  anomalyPercent: 0,
+  chartLabel: '--',
+  monitorParams: [],
+  rules: [],
+  trend: [],
+});
+
+async function loadAnalysis() {
+  try {
+    const res = await anomalyAnalysis({
+      deviceId: filter.value.device || undefined,
+      deviceType: filter.value.type || undefined,
+      lineId: filter.value.line || undefined,
+      stationId: filter.value.station || undefined,
+    });
+    analysis.value = {
+      anomalyIndex: res.anomalyIndex ?? 0,
+      anomalyPercent: res.anomalyPercent ?? 0,
+      chartLabel: res.deviceName || '全部设备',
+      monitorParams: res.monitorParams ?? [],
+      rules: res.rules ?? [],
+      trend: res.trend ?? [],
+    };
+  } catch {
+    // 接口异常时保留当前数据，避免自动刷新清空页面
+  }
+}
+
+// ==================== 异常事件记录 ====================
+interface AnomalyEventRow {
+  abnormalValue: string;
+  deviation: string;
+  deviceName: string;
+  id: string;
+  line: string;
+  normalValue: string;
+  param: string;
+  station: string;
+  time: string;
+}
+
+function mapEventRow(item: AnomalyEventVO): AnomalyEventRow {
+  const unit = item.unit ?? '';
+  return {
+    abnormalValue:
+      item.abnormalValue == null ? '--' : `${item.abnormalValue}${unit}`,
+    deviation:
+      item.deviationPercent == null ? '--' : `+${item.deviationPercent}%`,
+    deviceName: item.deviceName ?? '',
+    id: String(item.id),
+    line: item.lineName ?? '',
+    normalValue:
+      item.normalValue == null ? '--' : `${item.normalValue}${unit}`,
+    param: item.paramName ?? '',
+    station: item.stationName ?? '',
+    time: item.eventTime ?? '',
+  };
+}
+
+const events = ref<AnomalyEventRow[]>([]);
+
+async function loadEvents() {
+  try {
+    const res = await anomalyEventList({
+      deviceId: filter.value.device || undefined,
+      deviceType: filter.value.type || undefined,
+      lineId: filter.value.line || undefined,
+      pageNum: 1,
+      pageSize: 10,
+      stationId: filter.value.station || undefined,
+    });
+    events.value = (res.rows ?? []).map(mapEventRow);
+  } catch {
+    // 接口异常时保留当前数据
+  }
+}
+
+async function loadAnalysisAndEvents() {
+  await Promise.all([loadAnalysis(), loadEvents()]);
+}
 
 function handleReset() {
   filter.value = { device: '', line: '', station: '', type: '' };
-  tick.value = 0;
   refreshedAt.value = currentClock();
+  void refreshStationOptions('');
+  void loadDeviceOptions();
+  void loadAnalysisAndEvents();
 }
 
 function handleRefresh() {
-  tick.value += 1;
   refreshedAt.value = currentClock();
+  void loadDeviceOptions();
+  void loadAnalysisAndEvents();
 }
 
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-onMounted(() => {
+onMounted(async () => {
   refreshedAt.value = currentClock();
   refreshTimer = setInterval(handleRefresh, refreshInterval * 1000);
-  void loadLineOptions().then(() => refreshStationOptions(''));
+  await loadLineOptions();
+  await refreshStationOptions(filter.value.line);
+  await loadDeviceOptions();
+  await loadAnalysisAndEvents();
 });
 
 onUnmounted(() => {
@@ -160,7 +291,7 @@ onUnmounted(() => {
   }
 });
 
-// ==================== 电流 / 电压趋势 ====================
+// ==================== 电流趋势 ====================
 const trendChartOption = computed<EChartsOption>(() => {
   const points = analysis.value.trend;
   const times = points.map((point) => point.time);
@@ -169,15 +300,18 @@ const trendChartOption = computed<EChartsOption>(() => {
     points.length - 1,
   );
   const spike = points[spikeIndex];
+  // 后端已按异物规则阈值（如扶梯电流波动 >20%）判定是否异常，未达标不标注异常点
+  const hasAnomaly =
+    analysis.value.anomalyIndex >= 0 && analysis.value.anomalyPercent > 0 && !!spike;
   // 用单点折线系列标注异常点，避免引入未注册的 scatter / markPoint 模块
   const spikeSeriesData: Array<null | number> = points.map(() => null);
-  if (spike) {
+  if (hasAnomaly) {
     spikeSeriesData[spikeIndex] = spike.current;
   }
 
   return {
     grid: { bottom: 8, containLabel: true, left: 8, right: 8, top: 52 },
-    legend: { data: ['电流', '电压'], right: 0, top: 0 },
+    legend: { data: ['电流'], right: 0, top: 0 },
     series: [
       {
         data: points.map((point) => point.current),
@@ -186,16 +320,6 @@ const trendChartOption = computed<EChartsOption>(() => {
         name: '电流',
         smooth: true,
         type: 'line',
-        yAxisIndex: 0,
-      },
-      {
-        data: points.map((point) => point.voltage),
-        itemStyle: { color: '#3b82f6' },
-        lineStyle: { width: 2 },
-        name: '电压',
-        smooth: true,
-        type: 'line',
-        yAxisIndex: 1,
       },
       {
         data: spikeSeriesData,
@@ -205,14 +329,13 @@ const trendChartOption = computed<EChartsOption>(() => {
           fontSize: 12,
           formatter: `异常波动 +${analysis.value.anomalyPercent}%`,
           position: 'top',
-          show: true,
+          show: hasAnomaly,
         },
         lineStyle: { width: 0 },
         name: '异常点',
         symbol: 'circle',
         symbolSize: 14,
         type: 'line',
-        yAxisIndex: 0,
       },
     ],
     tooltip: { trigger: 'axis' },
@@ -222,14 +345,11 @@ const trendChartOption = computed<EChartsOption>(() => {
       data: times,
       type: 'category',
     },
-    yAxis: [
-      { name: '电流(A)', scale: true, type: 'value' },
-      { name: '电压(V)', scale: true, type: 'value' },
-    ],
+    yAxis: { name: '电流(A)', scale: true, type: 'value' },
   };
 });
 
-// ==================== 异常事件记录 ====================
+// ==================== 事件表列定义 ====================
 const eventColumns: TableProps['columns'] = [
   { dataIndex: 'time', key: 'time', title: '检测时间', width: 180 },
   { dataIndex: 'deviceName', key: 'deviceName', title: '设备名称', width: 220 },
@@ -260,14 +380,15 @@ const allEventColumns: TableProps['columns'] = [
   { dataIndex: 'deviation', key: 'deviation', title: '偏差', width: 100 },
 ];
 
+// ==================== 「全部记录」弹窗 ====================
 const allEventsOpen = ref(false);
 const allFilter = ref({ deviceName: '', line: '', station: '' });
 const allDateRange = ref<string[]>([]);
 
 const allStationOptions = ref<{ label: string; value: string }[]>([]);
 
-async function refreshAllStationOptions(lineName: string) {
-  allStationOptions.value = await loadStationOptions(lineName);
+async function refreshAllStationOptions(lineId: string) {
+  allStationOptions.value = await loadStationOptions(lineId);
 }
 
 function handleAllLineChange() {
@@ -275,48 +396,75 @@ function handleAllLineChange() {
   void refreshAllStationOptions(allFilter.value.line);
 }
 
-watch(allEventsOpen, (open) => {
-  if (open) {
-    void refreshAllStationOptions(allFilter.value.line);
-  }
-});
+const allEventsRaw = ref<AnomalyEventVO[]>([]);
 
-const allEventsRaw = computed(() =>
-  getAnomalyAllEvents({
-    device: '',
-    line: allFilter.value.line,
-    station: allFilter.value.station,
-    type: '',
-  }),
-);
+async function loadAllEvents() {
+  try {
+    const res = await anomalyEventList({
+      lineId: allFilter.value.line || undefined,
+      pageNum: 1,
+      pageSize: 200,
+      stationId: allFilter.value.station || undefined,
+    });
+    allEventsRaw.value = res.rows ?? [];
+  } catch {
+    // 接口异常时保留当前数据
+  }
+}
 
 const allEvents = computed(() => {
   const startDate = allDateRange.value[0] ?? '';
   const endDate = allDateRange.value[1] ?? '';
   const keyword = allFilter.value.deviceName.trim();
 
-  return allEventsRaw.value.filter((item) => {
-    if (keyword && !item.deviceName.includes(keyword)) {
-      return false;
-    }
+  return allEventsRaw.value
+    .filter((item) => {
+      if (keyword && !(item.deviceName ?? '').includes(keyword)) {
+        return false;
+      }
 
-    const date = item.time.slice(0, 10);
+      const date = (item.eventTime ?? '').slice(0, 10);
 
-    if (startDate && date < startDate) {
-      return false;
-    }
-    if (endDate && date > endDate) {
-      return false;
-    }
+      if (startDate && date < startDate) {
+        return false;
+      }
+      if (endDate && date > endDate) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .map(mapEventRow);
 });
 
 function handleAllReset() {
   allFilter.value = { deviceName: '', line: '', station: '' };
   allDateRange.value = [];
   void refreshAllStationOptions('');
+  void loadAllEvents();
+}
+
+watch(allEventsOpen, (open) => {
+  if (open) {
+    void loadAllEvents();
+    void refreshAllStationOptions(allFilter.value.line);
+  }
+});
+
+watch(
+  () => [allFilter.value.line, allFilter.value.station],
+  () => {
+    if (allEventsOpen.value) {
+      void loadAllEvents();
+    }
+  },
+);
+
+// ==================== 预警机制 ====================
+function deviceTypeLabel(type?: number) {
+  if (type === 1) return '自动扶梯';
+  if (type === 2) return '垂直电梯';
+  return '通用设备';
 }
 </script>
 
@@ -324,7 +472,7 @@ function handleAllReset() {
   <Page>
     <div class="model-anomaly-page">
       <PlatformViewToolbar
-        description="扶梯 / 电梯异物卡滞实时监测，电流电压异常自动预警，数据每 30 秒自动刷新"
+        description="扶梯 / 电梯异物卡滞实时监测，电流异常自动预警，数据每 30 秒自动刷新"
         title="异物检测分析"
       >
         <template #actions>
@@ -366,9 +514,9 @@ function handleAllReset() {
 
       <PlatformEchartsPanel
         :height="'340px'"
-        :description="`对象：${analysis.chartLabel} · 峰值偏差 +${analysis.anomalyPercent}%`"
+        :description="`对象：${analysis.chartLabel} · ${analysis.anomalyPercent > 0 ? `峰值偏差 +${analysis.anomalyPercent}%` : '未见异常波动'}`"
         :option="trendChartOption"
-        title="异物卡滞事件 — 电流/电压异常检测"
+        title="异物卡滞事件 — 电流异常检测"
       />
 
       <PlatformSection title="异物检测异常事件记录">
@@ -386,7 +534,7 @@ function handleAllReset() {
         <PlatformTable
           :action-column-width="0"
           :columns="eventColumns"
-          :data-source="analysis.events"
+          :data-source="events"
           :pagination="false"
           :scroll="{ x: 920 }"
           row-key="id"
@@ -416,8 +564,8 @@ function handleAllReset() {
             <div class="model-anomaly-monitor__head">
               <span class="model-anomaly-monitor__name">{{ param.name }}</span>
               <PlatformStatusTag
-                :label="anomalyStatusMeta[param.status].label"
-                :status="anomalyStatusMeta[param.status].status"
+                :label="statusMeta(param.status).label"
+                :status="statusMeta(param.status).status"
               />
             </div>
             <strong class="model-anomaly-monitor__value">{{ param.value }}</strong>
@@ -429,11 +577,32 @@ function handleAllReset() {
       </PlatformSection>
 
       <PlatformSection title="异物检测预警机制">
-        <ul class="model-anomaly-rules">
-          <li>电流波动超过 <strong>20%</strong>：自动触发异物卡滞疑似告警。</li>
-          <li>振动突增超过 <strong>30%</strong>：判定为机械异物卡滞风险。</li>
-          <li>电流与振动<strong>同时异常</strong>：升级为紧急告警，推送运维工单。</li>
-          <li>综合历史趋势，平均可提前 <strong>15 分钟</strong>预警异物卡滞事件。</li>
+        <ul v-if="analysis.rules.length > 0" class="model-anomaly-rules">
+          <li v-for="rule in analysis.rules" :key="rule.deviceType">
+            {{ deviceTypeLabel(rule.deviceType) }}：
+            <ul class="model-anomaly-rules__detail">
+              <li>
+                电流瞬时波动 &gt;
+                <strong>{{ rule.currentThreshold ?? '--' }}%</strong>
+                → 触发异物卡滞预警
+              </li>
+              <li>
+                振动值突增 &gt;
+                <strong>{{ rule.vibrationThreshold ?? '--' }}%</strong>
+                → 触发机械异物检测
+              </li>
+              <li>
+                电流 + 振动同时异常 →
+                <strong>{{ rule.alertLevel || '紧急告警' }}</strong>
+                ，建议立即停机检查（可提前
+                <strong>{{ rule.advanceMinutes ?? '--' }} 分钟</strong>
+                预警）
+              </li>
+            </ul>
+          </li>
+        </ul>
+        <ul v-else class="model-anomaly-rules">
+          <li>暂未配置异物检测规则，请在异物检测规则表中维护规则数据。</li>
         </ul>
       </PlatformSection>
     </div>
@@ -561,6 +730,16 @@ function handleAllReset() {
   padding-left: 20px;
   font-size: 13px;
   color: hsl(var(--foreground));
+}
+
+.model-anomaly-rules__detail {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.model-anomaly-rules__detail li + li {
+  margin-top: 4px;
 }
 
 .model-anomaly-rules strong {

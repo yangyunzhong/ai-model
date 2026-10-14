@@ -1,5 +1,6 @@
 package org.dromara.model.service;
 
+import org.dromara.model.domain.vo.ModelAnomalyAnalysisVo;
 import org.dromara.model.domain.vo.ModelAnomalyEventVo;
 import org.dromara.model.domain.bo.ModelAnomalyEventBo;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
@@ -65,4 +66,12 @@ public interface IModelAnomalyEventService {
      * @return 是否删除成功
      */
     Boolean deleteWithValidByIds(Collection<String> ids, Boolean isValid);
+
+    /**
+     * 异物检测分析聚合查询：趋势曲线、实时监测面板、规则配置与偏差指标
+     *
+     * @param bo 过滤条件（设备ID/设备类型/线路/车站）
+     * @return 分析结果
+     */
+    ModelAnomalyAnalysisVo analysis(ModelAnomalyEventBo bo);
 }

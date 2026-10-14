@@ -21,6 +21,12 @@ snail-job:
   server:
     host: 127.0.0.1
     port: 17888
+  # OpenAPI 通道（作业增删改查走 HTTP）：不配置时端口默认 8080，
+  # 与 SnailJob server 实际 HTTP 端口（8800，context-path=/snail-job）不符，会导致作业创建失败
+  openapi:
+    host: 127.0.0.1
+    port: 8800
+    prefix: snail-job
   # 命名空间UUID 详见 script/sql/ry_job.sql `sj_namespace`表`unique_id`字段
   namespace: ${spring.profiles.active}
   # 随主应用端口漂移

@@ -134,6 +134,9 @@ tenant:
     - sys_oss_config
     - flow_spel
     - metro_device
+    - metro_device_realtime
+    - metro_device_threshold
+    - metro_foreign_object_rule
 
 # MyBatisPlus配置
 # https://baomidou.com/config/
@@ -290,3 +293,20 @@ model:
     db-name: "ai-model"
     db-user: "model_reader"
     db-password: "model_reader_2026"
+
+--- # MinIO 自动拉起配置（后端启动时检测并自动启动本机 MinIO）
+minio:
+  auto-start:
+    # 是否启用自动拉起
+    enabled: true
+    # MinIO 服务地址（用于就绪探测）
+    host: 127.0.0.1
+    port: 9000
+    # 本机 MinIO 可执行文件与数据目录
+    exe-path: D:/minio/bin/minio.exe
+    data-dir: D:/minio/data2
+    # MinIO root 凭证；留空则使用数据目录已有凭证（首次初始化时生效）
+    root-user: ""
+    root-password: ""
+    # 等待 MinIO 端口就绪的超时秒数
+    wait-timeout-seconds: 15

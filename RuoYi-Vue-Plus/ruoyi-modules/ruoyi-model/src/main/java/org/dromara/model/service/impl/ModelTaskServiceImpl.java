@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.dromara.model.domain.bo.ModelRunOnceBo;
 import org.dromara.model.domain.bo.ModelTaskBo;
@@ -22,6 +23,8 @@ import org.dromara.model.mapper.ModelTaskMapper;
 import org.dromara.model.service.IModelExecLogService;
 import org.dromara.model.service.IModelTaskService;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -177,8 +180,43 @@ public class ModelTaskServiceImpl implements IModelTaskService {
             task.setCronExpression(null);
         } else {
             task.setScheduleType(SCHEDULE_TYPE_CRON);
-            task.setNextExecuteTime(null);
+            // 周期任务按 cron 重算"下次执行时间"，避免页面一直显示旧值或空值
+            task.setNextExecuteTime(nextCronTime(task.getCronExpression()));
         }
+    }
+
+    /**
+     * 解析 cron 表达式：5 位 unix（分 时 日 月 周）自动补秒位，兼容 6 位（秒 分 时 日 月 周）格式。
+     * 表达式为空或非法时返回 null。
+     *
+     * @param cronExpression cron 表达式
+     * @return 解析结果，无法解析时为 null
+     */
+    private CronExpression parseCron(String cronExpression) {
+        if (StringUtils.isBlank(cronExpression)) {
+            return null;
+        }
+        try {
+            String trimmed = cronExpression.trim();
+            // 5 位 unix cron 补秒位转 Spring 6 位格式解析
+            String springCron = trimmed.split("\\s+").length == 5 ? "0 " + trimmed : trimmed;
+            return CronExpression.parse(springCron);
+        } catch (Exception e) {
+            log.warn("cron 表达式解析失败, expression => {}", cronExpression, e);
+            return null;
+        }
+    }
+
+    /**
+     * 按 unix cron（5 位：分 时 日 月 周）计算下一次执行时间，表达式无效时返回 null
+     */
+    private Date nextCronTime(String cronExpression) {
+        CronExpression cron = parseCron(cronExpression);
+        if (cron == null) {
+            return null;
+        }
+        LocalDateTime next = cron.next(LocalDateTime.now());
+        return next == null ? null : Date.from(next.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     /**
@@ -194,6 +232,9 @@ public class ModelTaskServiceImpl implements IModelTaskService {
             }
         } else if (StringUtils.isBlank(entity.getCronExpression())) {
             throw new ServiceException("周期执行必须配置 cron 表达式");
+        } else if (parseCron(entity.getCronExpression()) == null) {
+            throw new ServiceException("cron 表达式不合法：" + entity.getCronExpression()
+                + "，请使用 5 位格式（分 时 日 月 周），例如每天 00:00 填写 0 0 * * *");
         }
     }
 
@@ -282,7 +323,8 @@ public class ModelTaskServiceImpl implements IModelTaskService {
     }
 
     /**
-     * 一次性任务触发完成后的收尾：回写最近执行时间并将任务状态置为「暂停」，
+     * 任务触发完成后的收尾：回写最近执行时间。
+     * 周期任务滚动计算下一次执行时间；一次性任务额外将状态置为「暂停」，
      * 平台侧不再重复调度；SnailJob 侧 POINT_IN_TIME 作业触发一次后由服务端自动完结。
      *
      * @param taskId 任务主键
@@ -299,6 +341,12 @@ public class ModelTaskServiceImpl implements IModelTaskService {
         ModelTask patch = new ModelTask();
         patch.setId(task.getId());
         patch.setLastExecuteTime(new Date());
+        // 周期任务：滚动计算下一次执行时间，供页面「下次执行」展示
+        if (SCHEDULE_TYPE_CRON.equals(task.getScheduleType())) {
+            patch.setNextExecuteTime(nextCronTime(task.getCronExpression()));
+            baseMapper.updateById(patch);
+            return;
+        }
         if (!STATUS_RUNNING.equals(task.getStatus())) {
             baseMapper.updateById(patch);
             return;
@@ -328,6 +376,15 @@ public class ModelTaskServiceImpl implements IModelTaskService {
         ModelTask patch = new ModelTask();
         patch.setId(task.getId());
         patch.setStatus(next);
+        // 开启时刷新"下次执行时间"：cron 型按表达式重算，避免页面显示旧值或空值
+        if (STATUS_RUNNING.equals(next)) {
+            Date nextExecuteTime = SCHEDULE_TYPE_ONCE.equals(task.getScheduleType())
+                ? task.getNextExecuteTime() : nextCronTime(task.getCronExpression());
+            if (nextExecuteTime != null) {
+                patch.setNextExecuteTime(nextExecuteTime);
+                task.setNextExecuteTime(nextExecuteTime);
+            }
+        }
         baseMapper.updateById(patch);
         task.setStatus(next);
         syncJobStatus(task);
@@ -359,9 +416,10 @@ public class ModelTaskServiceImpl implements IModelTaskService {
         }
         boolean once = SCHEDULE_TYPE_ONCE.equals(task.getScheduleType());
         TriggerTypeEnum triggerType = once ? TriggerTypeEnum.POINT_IN_TIME : TriggerTypeEnum.CRON;
+        // SnailJob 的 CRON 为 6 位（秒 分 时 日 月 周），平台约定 5 位需补秒位后下发
         String triggerInterval = once
             ? String.valueOf(task.getNextExecuteTime().getTime())
-            : task.getCronExpression();
+            : toQuartzCron(task.getCronExpression());
         StatusEnum status = toSnailStatus(task.getStatus());
         try {
             if (task.getJobId() != null && updateJob(task, status, triggerType, triggerInterval)) {
@@ -439,6 +497,24 @@ public class ModelTaskServiceImpl implements IModelTaskService {
      */
     private StatusEnum toSnailStatus(String status) {
         return STATUS_RUNNING.equals(status) ? StatusEnum.YES : StatusEnum.NO;
+    }
+
+    /**
+     * 平台 5 位 cron（分 时 日 月 周）转换为 SnailJob 要求的 Quartz 6 位 cron（秒 分 时 日 月 周）。
+     * Quartz 规定 day-of-month 与 day-of-week 不能同时指定（均为 * 也不行），需将其中一个置为 ?
+     */
+    private static String toQuartzCron(String cron) {
+        String trimmed = StringUtils.trimToEmpty(cron);
+        if (StringUtils.countMatches(trimmed, ' ') != 4) {
+            return trimmed;
+        }
+        String[] parts = ("0 " + trimmed).split(" ");
+        if ("*".equals(parts[5])) {
+            parts[5] = "?";
+        } else {
+            parts[3] = "?";
+        }
+        return String.join(" ", parts);
     }
 
     /**

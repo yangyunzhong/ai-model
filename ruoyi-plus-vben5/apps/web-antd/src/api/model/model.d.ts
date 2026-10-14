@@ -1065,6 +1065,104 @@ export interface AnomalyEventQuery extends PageQuery {
   params?: any;
 }
 
+export interface AnomalyAnalysisTrendPoint {
+  /**
+   * 监测时间（HH:mm）
+   */
+  time: string;
+
+  /**
+   * 电流（A）
+   */
+  current: number;
+}
+
+export interface AnomalyAnalysisMonitorParam {
+  /**
+   * 参数名（电流/电压/振动/温度）
+   */
+  name: string;
+
+  /**
+   * 当前值（带单位）
+   */
+  value: string;
+
+  /**
+   * 正常范围（文案）
+   */
+  range: string;
+
+  /**
+   * 监测状态：正常/关注/异常
+   */
+  status: string;
+}
+
+export interface AnomalyAnalysisForeignRule {
+  /**
+   * 设备类型：1-自动扶梯，2-垂直电梯
+   */
+  deviceType?: number;
+
+  /**
+   * 电流波动阈值（百分比）
+   */
+  currentThreshold?: number;
+
+  /**
+   * 振动突增阈值（百分比）
+   */
+  vibrationThreshold?: number;
+
+  /**
+   * 电流+振动同时异常时的告警级别说明
+   */
+  alertLevel?: string;
+
+  /**
+   * 提前预警分钟数
+   */
+  advanceMinutes?: number;
+}
+
+export interface AnomalyAnalysisVO {
+  /**
+   * 趋势曲线展示的设备ID
+   */
+  deviceId?: string;
+
+  /**
+   * 趋势曲线展示的设备名称（指定设备时为该设备名，否则为范围内第一台设备）
+   */
+  deviceName?: string;
+
+  /**
+   * 电流/电压趋势曲线（按时间升序，最近 30 个监测点）
+   */
+  trend?: AnomalyAnalysisTrendPoint[];
+
+  /**
+   * 电流峰值偏差百分比
+   */
+  anomalyPercent?: number;
+
+  /**
+   * 电流峰值在趋势序列中的索引
+   */
+  anomalyIndex?: number;
+
+  /**
+   * 实时监测参数面板
+   */
+  monitorParams?: AnomalyAnalysisMonitorParam[];
+
+  /**
+   * 异物检测规则配置（来自 metro_foreign_object_rule）
+   */
+  rules?: AnomalyAnalysisForeignRule[];
+}
+
 export interface DeviceVO {
   /**
     * 主键（设备编号）

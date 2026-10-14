@@ -135,7 +135,8 @@ function buildCron(): { cronDescription: string; cronExpression: string } | null
     window.message.warning('请选择有效的执行时间（时:分）');
     return null;
   }
-  const [minute = '0', hour = '0'] = time
+  // execTime 为"时:分"，cron 前两个域是"分 时"，顺序必须对调（如 14:31 → `31 14 * * *`）
+  const [hour = '0', minute = '0'] = time
     .split(':')
     .map((item) => String(Number(item)));
 
@@ -150,7 +151,7 @@ function buildCron(): { cronDescription: string; cronExpression: string } | null
     const labels = days.map((item) => weekdayLabelMap[String(Number(item))]);
     return {
       cronDescription: `每周${labels.join('、')} ${time}`,
-      cronExpression: `0 ${minute} ${hour} * ${days.join(',')}`,
+      cronExpression: `${minute} ${hour} * * ${days.join(',')}`,
     };
   }
 
@@ -162,13 +163,13 @@ function buildCron(): { cronDescription: string; cronExpression: string } | null
     }
     return {
       cronDescription: `每月 ${day} 日 ${time}`,
-      cronExpression: `0 ${minute} ${hour} ${day} *`,
+      cronExpression: `${minute} ${hour} ${day} * *`,
     };
   }
 
   return {
     cronDescription: `每天 ${time}`,
-    cronExpression: `0 ${minute} ${hour} * *`,
+    cronExpression: `${minute} ${hour} * * *`,
   };
 }
 

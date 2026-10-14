@@ -52,10 +52,14 @@ public class DockerModelExecutor implements ModelExecutor {
 
     @Override
     public boolean supports(ModelExecContext context) {
-        return Boolean.TRUE.equals(properties.getEnabled())
-            && StringUtils.isNotBlank(context.getContainerId())
-            && StringUtils.isNotBlank(context.getContainerScriptPath())
-            && containerManager.exists(context.getContainerId());
+        if (!Boolean.TRUE.equals(properties.getEnabled())
+            || StringUtils.isBlank(context.getContainerId())
+            || StringUtils.isBlank(context.getContainerScriptPath())) {
+            return false;
+        }
+        // 容器存在且可被拉起（running/exited）即支持执行；不存在（已删除）则交回退执行器处理
+        String status = containerManager.inspectStatus(context.getContainerId());
+        return "running".equals(status) || "exited".equals(status);
     }
 
     @Override
@@ -71,6 +75,14 @@ public class DockerModelExecutor implements ModelExecutor {
             "python", properties.getRunnerPath(),
             context.getContainerScriptPath(), entryFunction, base64Params, base64Meta
         };
+
+        // 容器中途退出（宿主机重启/休眠/异常清理）时先重新拉起，避免对 exited 容器 exec 抛 409
+        String status = containerManager.inspectStatus(context.getContainerId());
+        if (!"running".equals(status)) {
+            log.warn("模型容器未处于运行状态，尝试重新启动, containerId => {}, status => {}",
+                context.getContainerId(), status);
+            containerManager.startContainer(context.getContainerId());
+        }
 
         log.info("容器内执行脚本, containerId => {}, cmd => {}", context.getContainerId(), String.join(" ", cmd));
         ModelContainerManager.ExecResult execResult = containerManager.exec(

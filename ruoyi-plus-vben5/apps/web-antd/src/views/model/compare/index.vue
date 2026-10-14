@@ -7,7 +7,7 @@ import type {
   ComparisonExecuteVO,
   DefinitionVO,
   DeviceVO,
-} from '#/api/model';
+} from '#/api/model/model';
 
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -209,15 +209,17 @@ const deviceGroups = computed(() => {
   const lines = new Map<string, DeviceVO[]>();
 
   for (const device of allDevices.value) {
-    const key =
+    const lineName = device.lineName?.trim();
+    const fallbackLineId =
       device.lineId === undefined || device.lineId === null || device.lineId === ''
-        ? '未分组'
+        ? ''
         : String(device.lineId);
+    const label = lineName || fallbackLineId || '未分组';
 
-    if (!lines.has(key)) {
-      lines.set(key, []);
+    if (!lines.has(label)) {
+      lines.set(label, []);
     }
-    lines.get(key)!.push(device);
+    lines.get(label)!.push(device);
   }
 
   return [...lines.entries()].map(([line, devices]) => ({ devices, line }));
@@ -296,6 +298,50 @@ function cellValue(cell: ComparisonExecuteCell | undefined, field: string) {
   }
   const value = cell[field as keyof ComparisonExecuteCell];
   return typeof value === 'number' ? value : undefined;
+}
+
+/** 五维展示满分（与列标题 本体/20、工况/25… 对应），原始分为 0-100，按比例折算展示 */
+const DIMENSION_MAX: Record<string, number> = {
+  dimBody: 20,
+  dimCondition: 25,
+  dimFault: 25,
+  dimMaintain: 20,
+  dimEnv: 10,
+};
+
+/** 五维折算展示分：原始分(0-100) → 满分区间内的整数（如 92.5 分本体 → 18/20） */
+function dimensionDisplay(cell: ComparisonExecuteCell | undefined, field: string) {
+  const raw = cellValue(cell, field);
+
+  if (typeof raw !== 'number') {
+    return '-';
+  }
+
+  const max = DIMENSION_MAX[field] ?? 100;
+  const clamped = Math.max(0, Math.min(100, raw));
+
+  return String(Math.round((clamped / 100) * max));
+}
+
+/** 五维字段与列标题（本体/20、工况/25、故障/25、维保/20、环境/10）的对应关系 */
+const DIMENSION_ITEMS = [
+  { field: 'dimBody', title: '本体' },
+  { field: 'dimCondition', title: '工况' },
+  { field: 'dimFault', title: '故障' },
+  { field: 'dimMaintain', title: '维保' },
+  { field: 'dimEnv', title: '环境' },
+] as const;
+
+/**
+ * 五维折算分摘要：如「本体 18/20 · 工况 22/25 · 故障 20/25 · 维保 16/20 · 环境 9/10」，
+ * 用于比对结论区完整展示每个模型的六固定字段输出（等级 + 总分 + 五维）
+ */
+function dimensionSummary(cell: ComparisonExecuteCell | undefined) {
+  return DIMENSION_ITEMS.map(({ field, title }) => {
+    const max = DIMENSION_MAX[field] ?? 100;
+
+    return `${title} ${dimensionDisplay(cell, field)}/${max}`;
+  }).join(' · ');
 }
 
 function buildMatrix(vo: ComparisonExecuteVO) {
@@ -676,9 +722,10 @@ onMounted(async () => {
                 </template>
                 <template v-else>
                   {{
-                    getCellRow(record, column.key)?.[
-                      parseColumnKey(column.key).field as keyof ComparisonExecuteCell
-                    ] ?? '-'
+                    dimensionDisplay(
+                      getCellRow(record, column.key),
+                      parseColumnKey(column.key).field,
+                    )
                   }}
                 </template>
               </template>
@@ -728,6 +775,9 @@ onMounted(async () => {
                       variant="dot"
                     />
                     <b>{{ row.byModel[model.id]!.healthScore ?? '-' }} 分</b>
+                    <small class="model-compare-conclusion__dims">
+                      {{ dimensionSummary(row.byModel[model.id]) }}
+                    </small>
                   </template>
                   <span v-else>-</span>
                 </span>
@@ -1045,8 +1095,17 @@ onMounted(async () => {
 
 .model-compare-conclusion__model {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 8px 12px;
+  background: hsl(var(--accent) / 35%);
+  border-radius: var(--st-radius-card);
+}
+
+.model-compare-conclusion__dims {
+  font-size: 12px;
+  color: hsl(var(--muted-foreground));
 }
 
 .model-compare-conclusion__model em {
